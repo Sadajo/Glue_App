@@ -1,38 +1,35 @@
 ﻿// src/widgets/header/ui/CustomHeader.tsx
 import React from 'react';
-import {
-  SafeAreaView,
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { semanticColors } from '@app/styles/colors';  // ← semanticColors 사용
-import { BellIcon, SettingsIcon } from '@shared/assets/images';
+import {SafeAreaView, View, TouchableOpacity, StyleSheet} from 'react-native';
+import {useNavigation} from '@react-navigation/native';
+import {BellIcon, SettingsIcon} from '@shared/assets/images';
 
 interface CustomHeaderProps {
   title?: string;
 }
 
-const CustomHeader: React.FC<CustomHeaderProps> = ({ title }) => {
-  const navigation = useNavigation();
+const CustomHeader: React.FC<CustomHeaderProps> = ({title: _title}) => {
+  const navigation = useNavigation<any>();
+
+  // 터치 영역 확장 설정 (Home 헤더와 동일)
+  const touchHitSlop = {top: 20, right: 20, bottom: 20, left: 20};
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        {/* 좌측 빈 공간 (타이틀 자리) */}
+        {/* 좌측 빈 공간 */}
         <View style={styles.placeholder} />
         <View style={styles.actions}>
           <TouchableOpacity
-            onPress={() => navigation.navigate('NotificationsPanel')}
+            onPress={() => navigation.navigate('NotificationsScreen')}
             style={styles.iconButton}
-          >
+            hitSlop={touchHitSlop}>
             <BellIcon width={24} height={24} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('Settings')}
             style={styles.iconButton}
-          >
+            hitSlop={touchHitSlop}>
             <SettingsIcon width={24} height={24} />
           </TouchableOpacity>
         </View>
@@ -48,22 +45,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   container: {
-    height: 27,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingVertical: 13,
+    paddingHorizontal: 19,
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E0E0E0',
   },
   placeholder: {
-    width: 24, // 좌측 타이틀 대신 빈 공간
+    flex: 1, // 좌측 공간을 늘려서 아이콘들이 우측에 정렬되도록
   },
   actions: {
     flexDirection: 'row',
+    alignItems: 'center',
   },
   iconButton: {
-    marginLeft: 16,
+    marginLeft: 12, // Home 헤더의 아이콘 간격과 동일
   },
 });

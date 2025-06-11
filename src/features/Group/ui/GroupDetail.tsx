@@ -16,7 +16,7 @@ import GroupLikes from './components/GroupLikes';
 import {Button} from '@shared/ui';
 import {Text} from '@shared/ui/typography';
 import {toastService} from '../../../shared/lib/notifications/toast';
-import {useGroupDetail, useCreateDmChatRoom, useReportPost} from '../api/hooks';
+import {useGroupDetail, useCreateDmChatRoom, useReport} from '../api/hooks';
 import {useTranslation} from 'react-i18next';
 import {secureStorage} from '@shared/lib/security';
 import ReportModal from './components/ReportModal';
@@ -44,7 +44,7 @@ const GroupDetail: React.FC<GroupDetailProps> = ({route, navigation}) => {
   const {mutate: createDmChatRoomMutate} = useCreateDmChatRoom();
 
   // 신고 훅 사용
-  const {mutate: reportPostMutate} = useReportPost();
+  const {mutate: reportMutate} = useReport();
 
   // 작성자 프로필로 이동하는 핸들러
   const handleAuthorPress = (userId: number) => {
@@ -129,7 +129,11 @@ const GroupDetail: React.FC<GroupDetailProps> = ({route, navigation}) => {
       setIsSubmitting(true);
 
       // 내 아이디와 작성자 아이디를 userIds 배열에 포함
-      const creatorId = response.data.meeting.creator.userId;
+      const creatorId = response.data.meeting.creator?.userId;
+      if (!creatorId || !response.data.meeting.meetingId) {
+        console.error('필수 정보가 누락되었습니다.');
+        return;
+      }
       const userIds = [currentUserId, creatorId];
 
       createDmChatRoomMutate(
@@ -143,7 +147,7 @@ const GroupDetail: React.FC<GroupDetailProps> = ({route, navigation}) => {
 
             // 채팅방 ID를 이용해 채팅방 화면으로 이동
             const dmChatRoomId = response.data.detail.dmChatRoomId;
-            navigation.navigate('DmChat', {dmChatRoomId});
+            navigation.navigate('ChatRoom', {dmChatRoomId});
 
             toastService.success(
               t('common.success'),
@@ -175,27 +179,37 @@ const GroupDetail: React.FC<GroupDetailProps> = ({route, navigation}) => {
   };
 
   // 신고하기 핸들러
-  const handleReport = (reason: string) => {
+  const handleReport = (reasonId: number) => {
     if (!postId) return;
 
-    reportPostMutate(
+    reportMutate(
       {
-        postId: Number(postId),
-        reason: reason,
+        reportedId: Number(postId),
+        reasonId: reasonId,
       },
       {
-        onSuccess: () => {
-          console.log('게시글 신고 성공');
+        onSuccess: (response) => {
+          console.log('게시글 신고 성공:', response);
           toastService.success(
-            t('common.success'),
             t('group.detail.menu.reportModal.success'),
+            '신고가 정상적으로 접수되었습니다. 검토 후 조치하겠습니다.',
           );
         },
         onError: (error: any) => {
           console.error('게시글 신고 실패:', error.message);
+          // 구체적인 에러 메시지 제공
+          let errorMessage = t('group.detail.menu.reportModal.error');
+          if (error.message.includes('이미 신고한')) {
+            errorMessage = '이미 신고한 게시글입니다.';
+          } else if (error.message.includes('권한이 없습니다')) {
+            errorMessage = '신고할 권한이 없습니다.';
+          } else if (error.message.includes('존재하지 않는')) {
+            errorMessage = '존재하지 않는 게시글입니다.';
+          }
+          
           toastService.error(
-            t('common.error'),
-            error.message || t('group.detail.menu.reportModal.error'),
+            '신고 실패',
+            errorMessage,
           );
         },
       },
@@ -238,7 +252,7 @@ const GroupDetail: React.FC<GroupDetailProps> = ({route, navigation}) => {
   const {meeting, post} = response.data;
   const creator = meeting.creator;
   const mainImageUrl =
-    post.postImageUrl.length > 0 ? post.postImageUrl[0].imageUrl : null;
+    post.postImageUrl && post.postImageUrl.length > 0 ? post.postImageUrl[0].imageUrl : null;
 
   // 카테고리 ID가 있으면 번역된 텍스트로 변환
   const categoryText = meeting.categoryId
@@ -257,7 +271,7 @@ const GroupDetail: React.FC<GroupDetailProps> = ({route, navigation}) => {
   return (
     <SafeAreaView style={commonStyles.container}>
       <GroupHeader
-        creatorId={creator.userId}
+        creatorId={creator?.userId || 0}
         postId={post.postId}
         onReportPress={handleReportPress}
       />
@@ -265,11 +279,11 @@ const GroupDetail: React.FC<GroupDetailProps> = ({route, navigation}) => {
         {/* 작성자 정보 */}
         <GroupAuthorInfo
           category={categoryText}
-          authorName={creator.userNickname}
-          date={meeting.createdAt}
-          viewCounts={post.viewCount}
-          avatarUrl={creator.profileImageUrl || null}
-          userId={creator.userId}
+          authorName={creator?.userNickname || ''}
+          date={meeting.createdAt || ''}
+          viewCounts={post.viewCount || 0}
+          avatarUrl={creator?.profileImageUrl || null}
+          userId={creator?.userId || 0}
           onAuthorPress={handleAuthorPress}
           categoryBgColor={categoryBgColor}
           categoryTextColor={categoryTextColor}
@@ -295,16 +309,20 @@ const GroupDetail: React.FC<GroupDetailProps> = ({route, navigation}) => {
         {/* 모임 정보 */}
         <GroupInfo
           capacity={meeting.maxParticipants}
-          currentParticipants={meeting.currentParticipants}
-          language={meeting.languageId}
+          currentParticipants={meeting.currentParticipants || 0}
+          language={meeting.languageId || meeting.mainLanguageId}
           minForeigners={0} // TODO: 백엔드 API에 추가 필요
           meetingDate={meeting.meetingTime}
-          participants={meeting.participants}
+          participants={meeting.participants || []}
           onParticipantPress={handleAuthorPress}
         />
 
         {/* 좋아요 정보 */}
-        <GroupLikes likeCount={post.likeCount} postId={post.postId} />
+        <GroupLikes 
+          likeCount={post.likeCount} 
+          postId={post.postId} 
+          isLiked={post.isLiked}
+        />
 
         {/* 하단 버튼 영역 */}
         {!isMyPost && (

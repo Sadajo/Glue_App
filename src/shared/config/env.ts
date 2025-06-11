@@ -11,6 +11,7 @@ interface EnvConfig {
 
 // react-native-config에서 환경 변수 가져오기
 const envConfig: EnvConfig = {
+  // API_URL: Config.API_URL || 'http://10.0.2.2:8080',
   API_URL: Config.API_URL || 'http://13.125.235.131:8080',
   API_TIMEOUT: Number(Config.API_TIMEOUT) || 15000,
   AUTH_STORAGE_KEY: Config.AUTH_STORAGE_KEY || 'auth_token',

@@ -2,6 +2,7 @@ import messaging from '@react-native-firebase/messaging';
 import {Platform} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {logger} from '@/shared/lib/logger';
+import {updateFcmToken} from '@/features/auth/api/api';
 
 // FCM 토큰 저장 키
 const FCM_TOKEN_STORAGE_KEY = 'fcm_token';
@@ -138,6 +139,16 @@ export const fcmService = {
       }
 
       logger.info('FCM 토큰 획득 성공');
+
+      // 새 토큰을 서버에 전송
+      try {
+        await updateFcmToken(currentToken);
+        logger.info('FCM 토큰 서버 전송 성공');
+      } catch (error) {
+        logger.warn('FCM 토큰 서버 전송 실패:', error);
+        // 토큰 전송 실패해도 앱 동작에는 영향 없도록 함
+      }
+
       return currentToken;
     } catch (error) {
       logger.error('FCM 토큰 획득 에러:', error);
@@ -174,6 +185,14 @@ export const fcmService = {
         Date.now().toString(),
       );
 
+      // 새 토큰을 서버에 전송
+      try {
+        await updateFcmToken(token);
+        logger.info('갱신된 FCM 토큰 서버 전송 성공');
+      } catch (error) {
+        logger.warn('갱신된 FCM 토큰 서버 전송 실패:', error);
+      }
+
       // 콜백 호출
       onTokenRefresh(token);
     });
@@ -206,6 +225,65 @@ export const fcmService = {
       return await this.getToken();
     } catch (error) {
       logger.error('FCM 토큰 강제 새로고침 에러:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Foreground 메시지 수신 리스너 등록
+   * 앱이 실행 중일 때 받는 메시지 처리
+   * @param onMessage 메시지 수신 시 호출될 콜백 함수
+   */
+  registerForegroundMessageListener(
+    onMessage: (message: any) => void,
+  ): () => void {
+    return messaging().onMessage(async remoteMessage => {
+      logger.info('Foreground FCM 메시지 수신:', remoteMessage);
+      onMessage(remoteMessage);
+    });
+  },
+
+  /**
+   * Background 메시지 수신 리스너 등록
+   * 앱이 백그라운드에 있을 때 받는 메시지 처리
+   * @param onMessage 메시지 수신 시 호출될 콜백 함수
+   */
+  registerBackgroundMessageListener(
+    onMessage: (message: any) => Promise<void>,
+  ): void {
+    messaging().setBackgroundMessageHandler(async remoteMessage => {
+      logger.info('Background FCM 메시지 수신:', remoteMessage);
+      await onMessage(remoteMessage);
+    });
+  },
+
+  /**
+   * 알림 탭 이벤트 리스너 등록
+   * 사용자가 알림을 탭했을 때의 처리
+   * @param onNotificationOpen 알림 탭 시 호출될 콜백 함수
+   */
+  registerNotificationOpenedListener(
+    onNotificationOpen: (message: any) => void,
+  ): () => void {
+    return messaging().onNotificationOpenedApp(remoteMessage => {
+      logger.info('알림 탭으로 앱 실행:', remoteMessage);
+      onNotificationOpen(remoteMessage);
+    });
+  },
+
+  /**
+   * 앱이 종료된 상태에서 알림을 탭하여 실행된 경우 확인
+   * @returns Promise<any | null> 알림 메시지 또는 null
+   */
+  async getInitialNotification(): Promise<any | null> {
+    try {
+      const remoteMessage = await messaging().getInitialNotification();
+      if (remoteMessage) {
+        logger.info('앱 종료 상태에서 알림 탭으로 실행:', remoteMessage);
+      }
+      return remoteMessage;
+    } catch (error) {
+      logger.error('초기 알림 확인 에러:', error);
       return null;
     }
   },

@@ -15,7 +15,7 @@ import {useTranslation} from 'react-i18next';
 interface ReportModalProps {
   visible: boolean;
   onClose: () => void;
-  onReport: (reason: string) => void;
+  onReport: (reasonId: number) => void;
 }
 
 const ReportModal: React.FC<ReportModalProps> = ({
@@ -24,29 +24,29 @@ const ReportModal: React.FC<ReportModalProps> = ({
   onReport,
 }) => {
   const {t} = useTranslation();
-  const [selectedReason, setSelectedReason] = useState<string>('');
+  const [selectedReason, setSelectedReason] = useState<number | null>(null);
 
   const reportReasons = [
-    {id: 'spam', text: t('group.detail.menu.reportModal.reasons.spam')},
-    {id: 'adult', text: t('group.detail.menu.reportModal.reasons.adult')},
-    {id: 'illegal', text: t('group.detail.menu.reportModal.reasons.illegal')},
-    {id: 'hate', text: t('group.detail.menu.reportModal.reasons.hate')},
+    {id: 1, text: t('group.detail.menu.reportModal.reasons.spam')},
+    {id: 2, text: t('group.detail.menu.reportModal.reasons.adult')},
+    {id: 3, text: t('group.detail.menu.reportModal.reasons.illegal')},
+    {id: 4, text: t('group.detail.menu.reportModal.reasons.hate')},
   ];
 
-  const handleReasonSelect = (reasonId: string) => {
+  const handleReasonSelect = (reasonId: number) => {
     setSelectedReason(reasonId);
   };
 
   const handleReport = () => {
-    if (selectedReason) {
+    if (selectedReason !== null) {
       onReport(selectedReason);
-      setSelectedReason('');
+      setSelectedReason(null);
       onClose();
     }
   };
 
   const handleClose = () => {
-    setSelectedReason('');
+    setSelectedReason(null);
     onClose();
   };
 
@@ -111,14 +111,14 @@ const ReportModal: React.FC<ReportModalProps> = ({
           <Button
             label={t('group.detail.menu.reportModal.submitButton')}
             onPress={handleReport}
-            disabled={!selectedReason}
+            disabled={selectedReason === null}
             style={StyleSheet.flatten([
               styles.reportButton,
-              !selectedReason && styles.disabledButton,
+              selectedReason === null && styles.disabledButton,
             ])}
             textStyle={StyleSheet.flatten([
               styles.reportButtonText,
-              !selectedReason && styles.disabledButtonText,
+              selectedReason === null && styles.disabledButtonText,
             ])}
           />
         </TouchableOpacity>

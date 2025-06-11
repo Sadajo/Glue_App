@@ -1134,3 +1134,37 @@ export const getDepartmentName = (
 ): string => {
   return language === 'ko' ? dept.ko : dept.en;
 };
+
+// 학과 ID(major number)를 이용해 학과 이름을 찾는 함수
+export const getDepartmentNameById = (
+  majorId: number,
+  language: string = 'ko',
+): string => {
+  // majorId와 department.code를 숫자로 변환하여 비교
+  const department = departments.find(dept => {
+    // 코드값 앞의 0을 제거하고 숫자로 변환하여 비교
+    const codeAsNumber = parseInt(dept.code, 10);
+    return codeAsNumber === majorId;
+  });
+
+  if (!department) {
+    // 해당 ID에 맞는 학과가 없을 경우
+    return language === 'ko' ? '알 수 없는 학과' : 'Unknown Department';
+  }
+
+  return getDepartmentName(department, language);
+};
+
+// 학과 코드를 이용해 학과 이름을 찾는 함수 (code 필드 사용)
+export const getDepartmentNameByCode = (
+  code: string,
+  language: string = 'ko',
+): string => {
+  const department = departments.find(dept => dept.code === code);
+
+  if (!department) {
+    return language === 'ko' ? '알 수 없는 학과' : 'Unknown Department';
+  }
+
+  return getDepartmentName(department, language);
+};

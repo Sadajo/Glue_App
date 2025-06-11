@@ -3,6 +3,7 @@ import {StatusBar} from 'react-native';
 import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
 import {QueryProvider} from './query';
 import {ThemeProvider, useTheme} from './theme';
+import {WebSocketProvider} from './websocket';
 import {NavigationContainer} from '@react-navigation/native';
 import {I18nextProvider} from 'react-i18next';
 import i18n from '../../shared/lib/i18n';
@@ -57,9 +58,11 @@ export const AppProvider = ({children}: AppProviderProps) => {
     <SafeAreaProvider>
       <QueryProvider>
         <ThemeProvider>
-          <I18nextProvider i18n={i18n}>
-            <ThemedSafeAreaContainer>{children}</ThemedSafeAreaContainer>
-          </I18nextProvider>
+          <WebSocketProvider>
+            <I18nextProvider i18n={i18n}>
+              <ThemedSafeAreaContainer>{children}</ThemedSafeAreaContainer>
+            </I18nextProvider>
+          </WebSocketProvider>
         </ThemeProvider>
       </QueryProvider>
     </SafeAreaProvider>

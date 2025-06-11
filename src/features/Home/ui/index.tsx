@@ -5,11 +5,7 @@ import {useFocusEffect} from '@react-navigation/native';
 import Header from './components/Header';
 import BannerSection from './components/BannerSection';
 import CategorySection from './components/CategorySection';
-import {
-  popularMeetings,
-  koreanMeetings,
-  englishMeetings,
-} from '../model/dummyData';
+import CategorySection2 from './components/CategorySection2';
 
 const HomeScreen = () => {
   const {t} = useTranslation();
@@ -38,9 +34,8 @@ const HomeScreen = () => {
       <Header />
       <ScrollView style={styles.scrollContainer}>
         <BannerSection />
-        <CategorySection title={t('home.popular')} cards={popularMeetings} />
-        <CategorySection title={t('home.nearby')} cards={koreanMeetings} />
-        <CategorySection title={t('home.recent')} cards={englishMeetings} />
+        <CategorySection title={t('home.popular')} />
+        <CategorySection2 title={t('home.languageExchange')} />
       </ScrollView>
     </SafeAreaView>
   );

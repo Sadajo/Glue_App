@@ -58,7 +58,7 @@ export const createTextStyle = (
 // Typography 스타일 정의
 export const typography = {
   h1: createTextStyle('xxxl', 'bold'),
-  h2: createTextStyle('xxl', 'bold'),
+  h2: createTextStyle('xxl', 'semiBold'),
   h3: createTextStyle('xl', 'bold'),
   h4: createTextStyle('lg', 'semiBold'),
   subtitle1: createTextStyle('lg', 'medium'),

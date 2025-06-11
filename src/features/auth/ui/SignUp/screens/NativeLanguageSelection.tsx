@@ -30,7 +30,11 @@ const NativeLanguageSelection = ({
   return (
     <View style={styles.container}>
       <View style={styles.titleContainer}>
-        <Text variant="h2" color={colors.richBlack} style={styles.title}>
+        <Text
+          variant="h2"
+          weight="semiBold"
+          color={colors.richBlack}
+          style={styles.title}>
           {t('signup.nativeLanguage.title')}
         </Text>
         <Text variant="body2" color={colors.charcoal} style={styles.subtitle}>

@@ -54,3 +54,8 @@ const styles = StyleSheet.create({
 });
 
 export default Header;
+
+export {default as BackButtonHeader} from './BackButtonHeader';
+export {default as CustomHeader} from './CustomHeader';
+export {default as ProfileEditHeader} from './ProfileEditHeader';
+export {default as SettingsHeader} from './SettingsHeader';

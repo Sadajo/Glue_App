@@ -7,7 +7,8 @@
     "edit": "수정",
     "delete": "삭제",
     "loading": "로딩 중...",
-    "error": "오류가 발생했습니다",
+    "updating": "업데이트 중...",
+    "error": "오류",
     "retry": "다시 시도",
     "back": "뒤로",
     "next": "다음",
@@ -21,7 +22,9 @@
     "permission_check_error": "권한 확인 중 오류가 발생했습니다",
     "sending": "전송 중...",
     "confirm": "확인",
-    "success": "성공"
+    "success": "성공",
+    "unknownUser": "알 수 없는 사용자",
+    "withdraw": "탈퇴"
   },
   "time": {
     "am": "오전",
@@ -29,7 +32,7 @@
     "year": "년",
     "month": "월",
     "day": "일",
-    "hour": "시",
+    "hour": "시간",
     "minute": "분",
     "dateTimeFormat": "{{year}}년 {{month}}월 {{day}}일 {{period}} {{hours}}시 {{minutes}}분"
   },
@@ -50,6 +53,12 @@
     "invalidEmail": "올바른 이메일 형식이 아닙니다",
     "invalidPassword": "비밀번호는 6자 이상이어야 합니다",
     "kakaoLoginProcessing": "카카오 로그인 처리 중입니다...",
+    "appleLoginProcessing": "애플 로그인 처리 중입니다...",
+    "appleNoAuthCodeError": "애플 인증 코드를 받지 못했습니다",
+    "appleNoTokenError": "애플 인증 토큰을 받지 못했습니다",
+    "noTokenError": "인증 토큰을 받지 못했습니다",
+    "loginFailed": "로그인에 실패했습니다",
+    "kakaoNoIdError": "카카오 ID를 가져올 수 없습니다",
     "newUserRegistration": "회원 정보를 등록해주세요",
     "welcome": {
       "title": "GLUE",
@@ -112,7 +121,9 @@
       "title": "GLUE에서 사용할\n닉네임을 입력해주세요",
       "label": "닉네임",
       "placeholder": "닉네임을 입력하세요",
-      "duplicate": "이미 사용하고 있는 닉네임이에요."
+      "duplicate": "이미 사용하고 있는 닉네임이에요.",
+      "required": "닉네임을 입력해주세요.",
+      "checkFailed": "닉네임 중복 확인에 실패했습니다."
     },
     "profilePhoto": {
       "title": "프로필 사진을 설정해주세요",
@@ -123,7 +134,12 @@
       "unavailable": "이 기기에서는 이 기능을 사용할 수 없습니다.",
       "blocked": "앱이 카메라 또는 갤러리에 접근할 수 없습니다. 설정에서 권한을 허용해주세요.",
       "goToSettings": "설정으로 이동",
-      "error": "이미지를 불러오는 중 오류가 발생했습니다."
+      "settingsError": "설정으로 이동할 수 없습니다.",
+      "generalError": "권한 확인 중 오류가 발생했습니다.",
+      "error": "이미지를 불러오는 중 오류가 발생했습니다.",
+      "uploading": "업로드 중...",
+      "uploadSuccess": "이미지 업로드가 완료되었습니다.",
+      "uploadFailed": "이미지 업로드에 실패했습니다."
     },
     "introduction": {
       "title": "본인을 한 줄로 소개해보세요 :)",
@@ -131,8 +147,8 @@
       "placeholder": "나를 한 줄로 표현해보세요"
     },
     "nativeLanguage": {
-      "title": "모국어를 선택해주세요",
-      "subtitle": "이 중 모국어가 없는 경우, 가장 친숙한 언어를 선택해 주세요.",
+      "title": "주로 사용하는 언어를\n선택해주세요",
+      "subtitle": "평소에 많이 사용하고 가장 친숙한 언어를 선택해 주세요.",
       "korean": "한국어",
       "english": "영어",
       "japanese": "일본어",
@@ -142,7 +158,7 @@
       "spanish": "스페인어"
     },
     "languageLevel": {
-      "title": "선택한 모국어에 대한\n언어 수준을 설정해 주세요",
+      "title": "선택한 사용 언어에 대한\n언어 수준을 설정해 주세요",
       "subtitle": "교환 언어 수준은 언제든지 다시 설정할 수 있어요.",
       "beginner": "초급",
       "elementary": "기초",
@@ -152,7 +168,7 @@
     },
     "exchangeLanguage": {
       "title": "교환하고 싶은 언어를\n선택해주세요",
-      "subtitle": "교환하고 싶은 언어를 선택해주세요.",
+      "subtitle": "교환 언어는 언제든지 다시 설정할 수 있어요.",
       "korean": "한국어",
       "english": "영어",
       "japanese": "일본어",
@@ -206,14 +222,74 @@
     "languageSettings": "언어 설정",
     "myInfo": "내 정보",
     "myGroupsHistory": "내 모임 히스토리",
+    "myParticipatingGroups": "내가 참여 중인 모임",
     "myLikes": "내 좋아요 목록",
     "myGuestbook": "내 방명록",
     "privacySettings": "공개범위 설정",
+    "majorVisibility": "내 학과",
+    "meetingHistoryVisibility": "내 모임 히스토리",
+    "likeListVisibility": "내 좋아요 목록",
+    "guestbookVisibility": "방명록",
     "edit": "수정",
     "myLanguage": "나의 언어",
     "exchangeLanguage": "교환 언어",
     "level": "수준",
-    "title": "마이"
+    "title": "마이",
+    "loading": "정보를 불러오는 중...",
+    "loadError": "정보를 불러오는데 실패했습니다.",
+    "defaultUser": "사용자",
+    "defaultBio": "자기소개가 없습니다.",
+    "notSet": "미설정",
+    "language": "언어",
+    "languages": {
+      "korean": "한국어",
+      "english": "영어",
+      "japanese": "일본어",
+      "chinese": "중국어",
+      "german": "독일어",
+      "french": "프랑스어",
+      "spanish": "스페인어",
+      "other": "기타"
+    },
+    "levels": {
+      "beginner": "초보",
+      "elementary": "초급",
+      "intermediate": "중급",
+      "upperIntermediate": "중상급",
+      "advanced": "고급",
+      "native": "원어민",
+      "notSet": "미설정"
+    },
+    "editProfile": {
+      "title": "프로필 수정",
+      "loadingProfile": "프로필 정보를 불러오는 중...",
+      "loadProfileError": "프로필 정보를 불러오는데 실패했습니다.",
+      "introduction": "한줄소개",
+      "introductionPlaceholder": "자기소개를 입력해주세요",
+      "defaultIntroduction": "안녕하세요 잘 부탁드려요 😊 지금 영어를 배우고 있어서 같이 할 수 있으면 좋겠어요!",
+      "basicInfo": "기본 정보",
+      "name": "이름",
+      "nickname": "닉네임",
+      "birthDate": "생년월일",
+      "gender": "성별",
+      "male": "남성",
+      "female": "여성",
+      "schoolInfo": "학교 정보",
+      "school": "학교",
+      "department": "학과",
+      "email": "이메일",
+      "selectProfileImageOption": "프로필 이미지 선택 방법을 선택해주세요",
+      "camera": "카메라",
+      "gallery": "갤러리",
+      "unavailable": "해당 기능을 사용할 수 없습니다",
+      "blocked": "권한이 차단되어 있습니다. 설정에서 권한을 허용해주세요.",
+      "goToSettings": "설정으로 이동",
+      "settingsError": "설정을 열 수 없습니다",
+      "generalError": "오류가 발생했습니다",
+      "imagePickerError": "이미지 선택에 실패했습니다",
+      "imageUploadSuccess": "프로필 이미지가 성공적으로 업데이트되었습니다",
+      "imageUploadError": "프로필 이미지 업로드에 실패했습니다"
+    }
   },
   "board": {
     "title": "게시판",
@@ -242,7 +318,7 @@
     "all": "전체",
     "title": "메시지",
     "newMessage": "새 메시지",
-    "empty": "메시지가 없습니다",
+    "empty": "아직 메시지가 없습니다. 첫 메시지를 보내보세요!",
     "chat": "채팅",
     "send": "보내기",
     "typingMessage": "메시지를 입력하세요...",
@@ -276,6 +352,11 @@
     "title": "설정",
     "theme": "테마",
     "language": "언어",
+    "languageSettings": "언어 설정",
+    "appSettings": "앱 설정",
+    "systemLanguage": "시스템 언어",
+    "systemLanguageSelect": "시스템 언어 선택",
+    "languageSelect": "언어 선택",
     "notification": "알림",
     "account": "계정",
     "privacy": "개인정보",
@@ -283,7 +364,28 @@
     "about": "정보",
     "dark": "다크 모드",
     "light": "라이트 모드",
-    "system": "시스템 설정"
+    "system": "시스템 설정",
+    "languageChanged": "언어가 변경되었습니다",
+    "usageGuide": "이용 안내",
+    "appVersion": "앱 버전",
+    "inquiry": "문의하기",
+    "announcements": "공지사항",
+    "termsOfService": "서비스 이용약관",
+    "privacyPolicy": "개인정보 처리방침",
+    "openSourceLicense": "오픈소스 라이선스",
+    "others": "기타",
+    "logout": "로그아웃",
+    "withdrawal": "회원탈퇴",
+    "logoutConfirm": "정말 로그아웃하시겠습니까?",
+    "withdrawalConfirm": "정말 탈퇴하시겠습니까? 모든 데이터가 삭제됩니다.",
+    "languageChangeError": "언어 변경 중 오류:",
+    "systemLanguageSelectFallback": "시스템 언어를 선택해 주세요.",
+    "logoutProcessing": "로그아웃 처리",
+    "logoutSuccess": "로그아웃되었습니다",
+    "logoutError": "로그아웃에 실패했습니다",
+    "withdrawalProcessing": "회원탈퇴 처리",
+    "withdrawalSuccess": "회원 탈퇴가 완료되었습니다",
+    "withdrawalError": "회원 탈퇴에 실패했습니다"
   },
   "notification": {
     "title": "알림 예제",
@@ -317,7 +419,7 @@
   },
   "group": {
     "title": "모임글",
-    "create": "모임 만들기",
+    "createButton": "모임 만들기",
     "all": "전체",
     "write": "글쓰기",
     "categories": {
@@ -446,10 +548,12 @@
     "popular": "실시간 인기 모임글",
     "koreanUsers": "한국어 사용자를 찾는 모임",
     "englishUsers": "영어 사용자를 찾는 모임",
+    "languageExchange": "한국어 ↔ 영어 교환 모임",
     "nearby": "주변 모임",
-    "seeAll": "전체보기",
+    "seeAll": "더보기",
     "welcome": "환영합니다",
     "emptyState": "아직 모임이 없습니다",
+    "loading": "로딩 중...",
     "createFirst": "첫 모임을 만들어보세요"
   },
   "error": {
@@ -459,5 +563,30 @@
     "forbidden": "접근 권한이 없습니다",
     "notFound": "찾을 수 없습니다",
     "unknown": "알 수 없는 오류가 발생했습니다"
+  },
+  "invitation": {
+    "title": "모임 초대장",
+    "createSuccess": "초대장이 채팅방에 전송되었습니다!",
+    "createError": "초대장 생성에 실패했습니다.",
+    "acceptSuccess": "초대를 수락했습니다.",
+    "acceptError": "초대 수락에 실패했습니다.",
+    "sending": "초대장 생성 중...",
+    "accepting": "초대 수락중...",
+    "joiningChat": "채팅방 참여중...",
+    "expired": "초대 만료됨",
+    "timeExpiredLocal": "만료됨 (로컬 시간 기준)",
+    "acceptInvitation": "초대 수락하기",
+    "inviteMessage": "{{senderName}} 님이 모임에 초대했습니다. 참여를 원하시면 수락 버튼을 눌러주세요. 6시간 내로 모임 참여를 수락하지 않으시면 자동으로 초대가 취소됩니다.",
+    "shortMessage": "📧 {{senderName}}님이 {{inviteeName}}님을 모임에 초대했습니다",
+    "shortMessageDefault": "📧 모임 초대장을 보냈습니다",
+    "status": {
+      "pending": "대기중",
+      "accepted": "수락됨",
+      "expired": "만료됨",
+      "rejected": "거절됨"
+    },
+    "senderLabel": "호스트",
+    "noMeetingInfo": "모임 정보나 사용자 정보를 찾을 수 없습니다.",
+    "noInviteeFound": "초대할 사용자를 찾을 수 없습니다."
   }
 }

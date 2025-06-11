@@ -7,18 +7,51 @@ import {
   FlatList,
   TextInput,
   ScrollView,
-  Image,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import {useTranslation} from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {MOCK_GROUPS} from '../model/mockData';
+// import {MOCK_GROUPS} from '../model/mockData';
 import {GroupItemCard} from './components/GroupItemCard';
 import {Text} from '../../../shared/ui/typography/Text';
 import {Search, X} from '@shared/assets/images';
 import {GroupItem, GroupListNavigationProp} from '../model/types';
+import {config} from '@shared/config/env';
+import {secureStorage} from '@shared/lib/security';
 
 // 최근 검색어를 저장할 AsyncStorage 키
 const RECENT_SEARCHES_KEY = 'recentGroupSearches';
+
+// API 응답 타입 정의
+interface SearchResponse {
+  httpStatus: {
+    error: boolean;
+    is4xxClientError: boolean;
+    is5xxServerError: boolean;
+    is1xxInformational: boolean;
+    is2xxSuccessful: boolean;
+    is3xxRedirection: boolean;
+  };
+  isSuccess: boolean;
+  message: string;
+  code: number;
+  result: {
+    hasNext: boolean;
+    posts: {
+      postId: number;
+      viewCount: number;
+      categoryId: number;
+      title: string;
+      content: string;
+      likeCount: number;
+      currentParticipants: number;
+      maxParticipants: number;
+      createdAt: string;
+      thumbnailUrl: string;
+    }[];
+  };
+}
 
 interface GroupSearchProps {
   navigation: GroupListNavigationProp;
@@ -30,6 +63,9 @@ const GroupSearch: React.FC<GroupSearchProps> = ({navigation}) => {
   const [searchResults, setSearchResults] = useState<GroupItem[]>([]);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasNext, setHasNext] = useState(false);
+  const [lastPostId, setLastPostId] = useState<number | null>(null);
 
   // 컴포넌트 마운트 시 최근 검색어 로드
   useEffect(() => {
@@ -69,19 +105,82 @@ const GroupSearch: React.FC<GroupSearchProps> = ({navigation}) => {
     }
   };
 
-  // 검색어로 그룹 검색
-  const searchGroups = (text: string) => {
+  // API 호출로 그룹 검색
+  const searchGroups = async (text: string, lastId?: number | null) => {
     if (!text.trim()) {
       setSearchResults([]);
       return;
     }
 
-    const results = MOCK_GROUPS.filter(
-      group =>
-        group.title.toLowerCase().includes(text.toLowerCase()) ||
-        group.description.toLowerCase().includes(text.toLowerCase()),
-    );
-    setSearchResults(results);
+    setIsLoading(true);
+
+    try {
+      // 토큰 가져오기
+      const token = await secureStorage.getToken();
+
+      const url = new URL('/api/posts/search', config.API_URL);
+      url.searchParams.append('keyword', text);
+      url.searchParams.append('size', '10');
+
+      if (lastId !== null && lastId !== undefined) {
+        url.searchParams.append('lastPostId', lastId.toString());
+      }
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      // 토큰이 있으면 Authorization 헤더 추가
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        headers,
+      });
+
+      const data: SearchResponse = await response.json();
+
+      if (data.isSuccess && response.ok) {
+        // API 응답의 posts를 GroupItem 형태로 변환
+        const transformedPosts: GroupItem[] = data.result.posts.map(post => ({
+          id: post.postId.toString(),
+          title: post.title,
+          description: post.content,
+          category: post.categoryId.toString(), // 카테고리 매핑 필요
+          categoryColor: '#E3F2FD', // 기본 카테고리 색상
+          categoryTextColor: '#1976D2', // 기본 카테고리 텍스트 색상
+          likes: post.likeCount,
+          viewCounts: post.viewCount,
+          participants: `${post.currentParticipants}/${post.maxParticipants}`,
+          time: new Date(post.createdAt).toLocaleDateString('ko-KR'),
+          image: post.thumbnailUrl,
+        }));
+
+        if (lastId === null || lastId === undefined) {
+          // 새로운 검색
+          setSearchResults(transformedPosts);
+        } else {
+          // 더 많은 결과 로드 (페이지네이션)
+          setSearchResults(prev => [...prev, ...transformedPosts]);
+        }
+
+        setHasNext(data.result.hasNext);
+
+        // 다음 페이지를 위한 lastPostId 설정
+        if (transformedPosts.length > 0) {
+          setLastPostId(data.result.posts[data.result.posts.length - 1].postId);
+        }
+      } else {
+        Alert.alert('오류', data.message || '검색 중 오류가 발생했습니다.');
+      }
+    } catch (error) {
+      console.error('Search API error:', error);
+      Alert.alert('오류', '네트워크 오류가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // 검색 실행 핸들러
@@ -89,15 +188,24 @@ const GroupSearch: React.FC<GroupSearchProps> = ({navigation}) => {
     if (!searchText.trim()) return;
 
     setIsSearching(true);
+    setLastPostId(null); // 새로운 검색 시 lastPostId 초기화
     searchGroups(searchText);
     saveRecentSearch(searchText);
+  };
+
+  // 더 많은 결과 로드 (무한 스크롤)
+  const loadMoreResults = () => {
+    if (hasNext && !isLoading && lastPostId !== null) {
+      searchGroups(searchText, lastPostId);
+    }
   };
 
   // 최근 검색어 클릭 핸들러
   const handleRecentSearchPress = (search: string) => {
     setSearchText(search);
-    searchGroups(search);
     setIsSearching(true);
+    setLastPostId(null); // 새로운 검색 시 lastPostId 초기화
+    searchGroups(search);
     // 최근 검색어 목록에서 해당 검색어를 맨 앞으로 이동
     saveRecentSearch(search);
   };
@@ -120,7 +228,7 @@ const GroupSearch: React.FC<GroupSearchProps> = ({navigation}) => {
 
   // 그룹 아이템 클릭 핸들러
   const handleGroupPress = (groupId: string) => {
-    navigation.navigate('GroupDetail', {groupId});
+    navigation.navigate('GroupDetail', {postId: groupId});
   };
 
   return (
@@ -162,12 +270,23 @@ const GroupSearch: React.FC<GroupSearchProps> = ({navigation}) => {
               <GroupItemCard item={item} onPress={handleGroupPress} />
             )}
             keyExtractor={item => item.id}
+            onEndReached={loadMoreResults}
+            onEndReachedThreshold={0.5}
+            ListFooterComponent={
+              isLoading ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color="#1976D2" />
+                </View>
+              ) : null
+            }
             ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Text variant="body1">
-                  {t('group.search.noResults') || '검색 결과가 없습니다.'}
-                </Text>
-              </View>
+              !isLoading ? (
+                <View style={styles.emptyContainer}>
+                  <Text variant="body1">
+                    {t('group.search.noResults') || '검색 결과가 없습니다.'}
+                  </Text>
+                </View>
+              ) : null
             }
           />
         </>
@@ -328,6 +447,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
+  },
+  loadingContainer: {
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 

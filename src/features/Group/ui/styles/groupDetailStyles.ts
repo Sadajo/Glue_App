@@ -63,6 +63,7 @@ export const groupDetailStyles = StyleSheet.create({
   authorAvatar: {
     width: 40,
     height: 40,
+    borderRadius: 20,
     marginRight: 12,
   },
   authorTextContainer: {
@@ -110,6 +111,7 @@ export const groupDetailStyles = StyleSheet.create({
   // 이미지 스타일
   contentImage: {
     height: 355,
+    borderRadius: 8,
     marginBottom: 20,
   },
 

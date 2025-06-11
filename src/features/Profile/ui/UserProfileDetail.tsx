@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React from 'react';
 import {
   SafeAreaView,
   View,
@@ -15,6 +15,9 @@ import {
   UserIcon,
   SchoolIcon,
 } from '@shared/assets/images';
+import {useUserProfile} from '../model/useUserProfile';
+import {getLanguageText, getLanguageLevelText} from '../model/utils';
+import {useTranslation} from 'react-i18next';
 
 interface UserProfileDetailProps {
   route: {
@@ -25,64 +28,13 @@ interface UserProfileDetailProps {
   navigation: any;
 }
 
-interface UserProfileData {
-  userId: number;
-  userNickname: string;
-  profileImageUrl: string | null;
-  description: string;
-  gender: number; // 1: 남성, 2: 여성
-  age: number;
-  school: string;
-  major: string;
-  systemLanguage: string;
-  languageMain: string;
-  languageMainLevel: string;
-  languageLearn: string;
-  languageLearnLevel: string;
-}
-
-// 임시 데이터 (추후 API 호출로 대체)
-const mockUserData: UserProfileData = {
-  userId: 1,
-  userNickname: '김글루',
-  profileImageUrl: null,
-  description: '안녕하세요~ 잘 부탁드립니다😊',
-  gender: 2,
-  age: 23,
-  school: '부산대학교',
-  major: '국어국문학과',
-  systemLanguage: '한국어',
-  languageMain: '한국어',
-  languageMainLevel: '초급',
-  languageLearn: '영어',
-  languageLearnLevel: '초보',
-};
-
 const UserProfileDetail: React.FC<UserProfileDetailProps> = ({
   route,
   navigation,
 }) => {
   const {userId} = route.params;
-  const [userProfile, setUserProfile] = useState<UserProfileData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    // TODO: 실제 API 호출로 대체
-    const fetchUserProfile = async () => {
-      try {
-        setIsLoading(true);
-        // 임시로 1초 후 데이터 로드
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setUserProfile(mockUserData);
-      } catch (error) {
-        console.error('사용자 프로필 로드 오류:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchUserProfile();
-  }, [userId]);
+  const {t} = useTranslation();
+  const {userProfile, isLoading, isError, error} = useUserProfile(userId);
 
   const renderProfileImage = () => {
     if (userProfile?.profileImageUrl) {
@@ -104,7 +56,44 @@ const UserProfileDetail: React.FC<UserProfileDetailProps> = ({
   };
 
   const getGenderText = (gender: number) => {
-    return gender === 1 ? '남성' : '여성';
+    return gender === 1 ? t('profile.editProfile.male') : t('profile.editProfile.female');
+  };
+
+  const getAgeFromBirthDate = (birthDate: string): number => {
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    
+    return age;
+  };
+
+  const getSchoolName = (schoolCode: number): string => {
+    // TODO: 실제 학교 코드 매핑 로직 구현
+    const schoolNames: Record<number, string> = {
+      1: '부산대학교',
+      2: '서울대학교',
+      3: '연세대학교',
+      4: '고려대학교',
+      // 추가 학교들...
+    };
+    return schoolNames[schoolCode] || '알 수 없는 학교';
+  };
+
+  const getMajorName = (majorCode: number): string => {
+    // TODO: 실제 전공 코드 매핑 로직 구현
+    const majorNames: Record<number, string> = {
+      1: '국어국문학과',
+      2: '영어영문학과',
+      3: '컴퓨터공학과',
+      4: '경영학과',
+      // 추가 전공들...
+    };
+    return majorNames[majorCode] || '알 수 없는 전공';
   };
 
   if (isLoading) {
@@ -124,7 +113,7 @@ const UserProfileDetail: React.FC<UserProfileDetailProps> = ({
     );
   }
 
-  if (!userProfile) {
+  if (isError || !userProfile) {
     return (
       <SafeAreaView style={userProfileDetailStyles.container}>
         <View style={userProfileDetailStyles.header}>
@@ -136,7 +125,7 @@ const UserProfileDetail: React.FC<UserProfileDetailProps> = ({
         </View>
         <View style={userProfileDetailStyles.errorContainer}>
           <Text style={userProfileDetailStyles.errorText}>
-            사용자 정보를 불러올 수 없습니다.
+            {error?.message || t('profile.loadError')}
           </Text>
         </View>
       </SafeAreaView>
@@ -163,10 +152,10 @@ const UserProfileDetail: React.FC<UserProfileDetailProps> = ({
         {/* 사용자 기본 정보 */}
         <View style={userProfileDetailStyles.basicInfoSection}>
           <Text style={userProfileDetailStyles.userName}>
-            {userProfile.userNickname}
+            {userProfile.nickName}
           </Text>
           <Text style={userProfileDetailStyles.description}>
-            {userProfile.description}
+            {userProfile.description || t('profile.defaultBio')}
           </Text>
 
           {/* 성별, 나이 */}
@@ -174,7 +163,7 @@ const UserProfileDetail: React.FC<UserProfileDetailProps> = ({
             <View style={userProfileDetailStyles.infoItem}>
               <UserIcon width={20} height={20} color="#666666" />
               <Text style={userProfileDetailStyles.infoText}>
-                {getGenderText(userProfile.gender)}, {userProfile.age}세
+                {getGenderText(userProfile.gender)}, {getAgeFromBirthDate(userProfile.birthDate)}세
               </Text>
             </View>
           </View>
@@ -184,7 +173,7 @@ const UserProfileDetail: React.FC<UserProfileDetailProps> = ({
             <View style={userProfileDetailStyles.infoItem}>
               <SchoolIcon width={20} height={20} color="#666666" />
               <Text style={userProfileDetailStyles.infoText}>
-                {userProfile.school} {userProfile.major}
+                {getSchoolName(userProfile.school)} {getMajorName(userProfile.major)}
               </Text>
             </View>
           </View>
@@ -192,25 +181,25 @@ const UserProfileDetail: React.FC<UserProfileDetailProps> = ({
 
         {/* 언어 정보 */}
         <View style={userProfileDetailStyles.languageSection}>
-          <Text style={userProfileDetailStyles.sectionTitle}>언어</Text>
+          <Text style={userProfileDetailStyles.sectionTitle}>{t('profile.languageSettings')}</Text>
 
           <View style={userProfileDetailStyles.languageContainer}>
             <View style={userProfileDetailStyles.languageColumn}>
               <View style={userProfileDetailStyles.languageItem}>
                 <Text style={userProfileDetailStyles.languageLabel}>
-                  사용 언어
+                  {t('profile.myLanguage')}
                 </Text>
                 <Text style={userProfileDetailStyles.languageValue}>
-                  {userProfile.languageMain}
+                  {getLanguageText(userProfile.mainLanguage, t)}
                 </Text>
               </View>
 
               <View style={userProfileDetailStyles.languageItem}>
                 <Text style={userProfileDetailStyles.languageLabel}>
-                  언어 수준
+                  {t('profile.level')}
                 </Text>
                 <Text style={userProfileDetailStyles.languageValue}>
-                  {userProfile.languageMainLevel}
+                  {getLanguageLevelText(userProfile.mainLanguageLevel, t)}
                 </Text>
               </View>
             </View>
@@ -218,19 +207,19 @@ const UserProfileDetail: React.FC<UserProfileDetailProps> = ({
             <View style={userProfileDetailStyles.languageColumn}>
               <View style={userProfileDetailStyles.languageItem}>
                 <Text style={userProfileDetailStyles.languageLabel}>
-                  교환 언어
+                  {t('profile.exchangeLanguage')}
                 </Text>
                 <Text style={userProfileDetailStyles.languageValue}>
-                  {userProfile.languageLearn}
+                  {getLanguageText(userProfile.learningLanguage, t)}
                 </Text>
               </View>
 
               <View style={userProfileDetailStyles.languageItem}>
                 <Text style={userProfileDetailStyles.languageLabel}>
-                  언어 수준
+                  {t('profile.level')}
                 </Text>
                 <Text style={userProfileDetailStyles.languageValue}>
-                  {userProfile.languageLearnLevel}
+                  {getLanguageLevelText(userProfile.learningLanguageLevel, t)}
                 </Text>
               </View>
             </View>
@@ -240,19 +229,19 @@ const UserProfileDetail: React.FC<UserProfileDetailProps> = ({
         {/* 사용자 정보 섹션 */}
         <View style={userProfileDetailStyles.userInfoSection}>
           <Text style={userProfileDetailStyles.sectionTitle}>
-            {userProfile.userNickname} 님의 정보
+            {userProfile.nickName} 님의 정보
           </Text>
 
           <TouchableOpacity style={userProfileDetailStyles.menuItem}>
-            <Text style={userProfileDetailStyles.menuText}>모임 히스토리</Text>
+            <Text style={userProfileDetailStyles.menuText}>{t('profile.myGroupsHistory')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={userProfileDetailStyles.menuItem}>
-            <Text style={userProfileDetailStyles.menuText}>참여 중인 모임</Text>
+            <Text style={userProfileDetailStyles.menuText}>{t('profile.myParticipatingGroups')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={userProfileDetailStyles.menuItem}>
-            <Text style={userProfileDetailStyles.menuText}>좋아요 목록</Text>
+            <Text style={userProfileDetailStyles.menuText}>{t('profile.myLikes')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -260,10 +249,10 @@ const UserProfileDetail: React.FC<UserProfileDetailProps> = ({
             onPress={() =>
               navigation.navigate('Guestbook', {
                 userId: userProfile.userId,
-                userNickname: userProfile.userNickname,
+                userNickname: userProfile.nickName,
               })
             }>
-            <Text style={userProfileDetailStyles.menuText}>방명록</Text>
+            <Text style={userProfileDetailStyles.menuText}>{t('profile.myGuestbook')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

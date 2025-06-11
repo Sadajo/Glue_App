@@ -20,18 +20,25 @@ import {GroupStackParamList} from '@features/Group/model/types';
 
 // 채팅 화면 컴포넌트 임포트
 import {ChatRoomListScreen, ChatRoomScreen} from '@features/Chat';
+import GroupChatRoomScreen from '@features/Chat/ui/GroupChatRoomScreen';
 
 // 프로필 화면 컴포넌트 임포트
 import {
   ProfileMainScreen,
   ProfileEditScreen,
   MyPageScreen,
+  PrivacySettingsScreen,
   MyProfileDetailScreen,
   GroupHistoryScreen,
   LikedGroupsScreen,
+  MyParticipatingMeetingsScreen,
   UserProfileDetail,
   GuestbookScreen,
+  DescriptionEditScreen,
 } from '@features/Profile';
+
+// 설정 화면 임포트
+import {SettingsScreen} from '@features/Settings';
 // 인증 화면 임포트
 import {
   WelcomeScreen,
@@ -41,6 +48,7 @@ import {
 
 // 헤더 컴포넌트 임포트
 import CustomHeader from '@widgets/header/ui/CustomHeader';
+import {BackButtonHeader} from '@widgets/header/ui';
 
 // 알림 패널 임포트
 import {NotificationsScreen} from '@features/notifications';
@@ -112,11 +120,11 @@ const MessagesNavigator = () => (
         <ChatRoomListScreen
           {...props}
           chatRooms={[]} // 빈 배열로 초기화, 실제 데이터는 ChatRoomListScreen 내부에서 API로 로드
-          onChatRoomPress={roomId => {
-            props.navigation.navigate('ChatRoom', {roomId});
-          }}
           onDmChatRoomPress={dmRoomId => {
             props.navigation.navigate('ChatRoom', {dmChatRoomId: dmRoomId});
+          }}
+          onGroupChatRoomPress={groupChatroomId => {
+            props.navigation.navigate('GroupChatRoomScreen', {groupChatroomId});
           }}
         />
       )}
@@ -193,10 +201,21 @@ const renderProfileIcon = ({color}: {color: string}) => (
   <ProfileIcon color={color} size={28} />
 );
 
+// 헤더 컴포넌트들을 미리 생성
+const ProfileDetailHeader = () => <BackButtonHeader title="내 프로필 상세" />;
+const GroupHistoryHeader = () => <BackButtonHeader title="모임 히스토리" />;
+const LikedGroupsHeader = () => <BackButtonHeader title="좋아요 목록" />;
+const MyParticipatingMeetingsHeader = () => (
+  <BackButtonHeader title="내가 참여 중인 모임" />
+);
+const PrivacySettingsHeader = () => <BackButtonHeader title="공개범위 설정" />;
+const GuestbookHeader = () => <BackButtonHeader title="방명록" />;
+const NotificationsHeader = () => <BackButtonHeader title="알림" />;
+
 // 커스텀 헤더 랜더러
 const ProfileNavigator = () => (
   <ProfileStack.Navigator
-    initialRouteName="MyPage" // ← 여기 추가!
+    initialRouteName="MyPage"
     screenOptions={{
       headerShown: true,
       header: () => <CustomHeader title="마이페이지" />,
@@ -209,31 +228,6 @@ const ProfileNavigator = () => (
     <ProfileStack.Screen
       name="MyPage"
       component={MyPageScreen}
-      options={{headerShown: false}}
-    />
-    <ProfileStack.Screen
-      name="ProfileDetail"
-      component={MyProfileDetailScreen}
-      options={{title: '내 프로필 상세', headerBackTitle: '뒤로'}}
-    />
-    <ProfileStack.Screen
-      name="GroupHistory"
-      component={GroupHistoryScreen}
-      options={{title: '모임 히스토리', headerBackTitle: '뒤로'}}
-    />
-    <ProfileStack.Screen
-      name="LikedGroups"
-      component={LikedGroupsScreen}
-      options={{title: '좋아요 목록', headerBackTitle: '뒤로'}}
-    />
-    <ProfileStack.Screen
-      name="ProfileEdit"
-      component={ProfileEditScreen}
-      options={{title: '프로필 수정', headerBackTitle: '취소'}}
-    />
-    <ProfileStack.Screen
-      name="Guestbook"
-      component={GuestbookScreen}
       options={{headerShown: false}}
     />
   </ProfileStack.Navigator>
@@ -306,6 +300,78 @@ const MainNavigator = () => (
     <MainStack.Screen
       name="NotificationsScreen"
       component={NotificationsScreen}
+      options={{
+        headerShown: true,
+        header: NotificationsHeader,
+      }}
+    />
+    <MainStack.Screen
+      name="ProfileEdit"
+      component={ProfileEditScreen}
+      options={{
+        headerShown: false,
+      }}
+    />
+    <MainStack.Screen
+      name="Settings"
+      component={SettingsScreen}
+      options={{
+        headerShown: false,
+      }}
+    />
+    <MainStack.Screen
+      name="DescriptionEdit"
+      component={DescriptionEditScreen}
+      options={{
+        headerShown: false,
+      }}
+    />
+    <MainStack.Screen
+      name="ProfileDetail"
+      component={MyProfileDetailScreen}
+      options={{
+        headerShown: true,
+        header: ProfileDetailHeader,
+      }}
+    />
+    <MainStack.Screen
+      name="GroupHistory"
+      component={GroupHistoryScreen}
+      options={{
+        headerShown: true,
+        header: GroupHistoryHeader,
+      }}
+    />
+    <MainStack.Screen
+      name="LikedGroups"
+      component={LikedGroupsScreen}
+      options={{
+        headerShown: true,
+        header: LikedGroupsHeader,
+      }}
+    />
+    <MainStack.Screen
+      name="MyParticipatingMeetings"
+      component={MyParticipatingMeetingsScreen}
+      options={{
+        headerShown: true,
+        header: MyParticipatingMeetingsHeader,
+      }}
+    />
+    <MainStack.Screen
+      name="PrivacySettings"
+      component={PrivacySettingsScreen}
+      options={{
+        headerShown: true,
+        header: PrivacySettingsHeader,
+      }}
+    />
+    <MainStack.Screen
+      name="Guestbook"
+      component={GuestbookScreen as any}
+      options={{
+        headerShown: false,
+      }}
     />
   </MainStack.Navigator>
 );
@@ -354,14 +420,14 @@ export const AppNavigator = () => {
         component={UserProfileDetail}
         options={{headerShown: false}}
       />
-      <GroupStack.Screen
-        name="Guestbook"
-        component={GuestbookScreen}
-        options={{headerShown: false}}
-      />
       <MessagesStack.Screen
         name="ChatRoom"
         component={ChatRoomScreen}
+        options={{headerShown: false}}
+      />
+      <MessagesStack.Screen
+        name="GroupChatRoomScreen"
+        component={GroupChatRoomScreen}
         options={{headerShown: false}}
       />
     </RootStack.Navigator>

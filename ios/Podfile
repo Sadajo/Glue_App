@@ -20,6 +20,7 @@ setup_permissions([
   'Camera',
   'PhotoLibrary',
   'PhotoLibraryAddOnly',
+  'Notifications',
 ])
 
 # 기존의 react-native-permissions 관련 pod 제거

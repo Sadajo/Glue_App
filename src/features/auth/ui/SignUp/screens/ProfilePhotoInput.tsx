@@ -69,10 +69,21 @@ const ProfilePhotoInput = ({
       let permission: Permission;
 
       if (type === 'camera') {
-        permission = PERMISSIONS.IOS.CAMERA;
+        permission =
+          Platform.OS === 'ios'
+            ? PERMISSIONS.IOS.CAMERA
+            : PERMISSIONS.ANDROID.CAMERA;
       } else {
-        // iOS의 경우 추가 전용 권한 먼저 시도
-        permission = PERMISSIONS.IOS.PHOTO_LIBRARY_ADD_ONLY;
+        // 갤러리 권한 설정
+        if (Platform.OS === 'ios') {
+          permission = PERMISSIONS.IOS.PHOTO_LIBRARY_ADD_ONLY;
+        } else {
+          // Android 13 이상에서는 READ_MEDIA_IMAGES, 이하에서는 READ_EXTERNAL_STORAGE
+          permission =
+            Number(Platform.Version) >= 33
+              ? PERMISSIONS.ANDROID.READ_MEDIA_IMAGES
+              : PERMISSIONS.ANDROID.READ_EXTERNAL_STORAGE;
+        }
       }
 
       const result = await check(permission);
@@ -166,6 +177,7 @@ const ProfilePhotoInput = ({
       const uri = selectedAsset.uri;
 
       if (uri) {
+        // 로컬 이미지 설정 (회원가입 완료 후 업로드 예정)
         setPhotoUri(uri);
         onPhotoSelect(uri);
       }
@@ -177,7 +189,11 @@ const ProfilePhotoInput = ({
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}>
       <View style={styles.titleContainer}>
-        <Text variant="h2" color={colors.richBlack} style={styles.title}>
+        <Text
+          variant="h2"
+          weight="semiBold"
+          color={colors.richBlack}
+          style={styles.title}>
           {t('signup.profilePhoto.title')}
         </Text>
         <Text variant="body2" color={colors.charcoal} style={styles.subtitle}>

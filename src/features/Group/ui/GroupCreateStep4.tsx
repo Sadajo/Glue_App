@@ -10,6 +10,7 @@ import {
   Modal,
   ActivityIndicator,
 } from 'react-native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {useTranslation} from 'react-i18next';
 import DateTimePicker, {
@@ -20,7 +21,7 @@ import {colors} from '../../../app/styles/colors';
 import {Text} from '../../../shared/ui/typography/Text';
 import GroupCreateHeader from './components/GroupCreateHeader';
 import {CalendarOpacityIcon, ClockIcon} from '../../../shared/assets/images';
-import {useCreateGroupPost} from '../api/hooks';
+import {useCreateGroupPost, useJoinGroupChatRoom} from '../api/hooks';
 import {toastService} from '../../../shared/lib/notifications/toast';
 
 // Daum Postcode 결과 데이터 타입
@@ -51,21 +52,30 @@ const GroupCreateStep4 = () => {
   const route = useRoute();
   const {t} = useTranslation();
   const params = route.params as RouteParams;
+  const insets = useSafeAreaInsets();
 
   const [title, setTitle] = useState<string>('');
-  const [date, setDate] = useState<Date>(new Date());
-  const [tempDate, setTempDate] = useState<Date>(new Date());
+  // 현재 시간 + 3시간을 최소 시간으로 설정
+  const getMinimumDateTime = () => {
+    const now = new Date();
+    now.setHours(now.getHours() + 3);
+    return now;
+  };
+
+  const [date, setDate] = useState<Date>(getMinimumDateTime());
+  const [tempDate, setTempDate] = useState<Date>(getMinimumDateTime());
   const [location, setLocation] = useState<string>('');
-  const [coordinates, _setCoordinates] = useState<{
-    latitude?: number;
-    longitude?: number;
-  }>({});
   const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
   const [showTimePicker, setShowTimePicker] = useState<boolean>(false);
   const [showAddressModal, setShowAddressModal] = useState<boolean>(false);
 
   // API 호출을 위한 훅 사용
-  const {mutate: createPost, isPending} = useCreateGroupPost();
+  const {mutate: createPost, isPending: isCreatingPost} = useCreateGroupPost();
+  const {mutate: joinChatRoom, isPending: isJoiningChat} =
+    useJoinGroupChatRoom();
+
+  // 전체 로딩 상태
+  const isPending = isCreatingPost || isJoiningChat;
 
   const handleBack = () => {
     navigation.goBack();
@@ -133,9 +143,8 @@ const GroupCreateStep4 = () => {
         categoryId: getCategoryId(params.groupType),
         meetingPlaceName: location,
         meetingTime: formattedDate,
-        meetingPlaceLatitude: coordinates.latitude,
-        meetingPlaceLongitude: coordinates.longitude,
-        languageId: getLanguageId(params.exchangeLanguage),
+        mainLanguageId: getLanguageId(params.myLanguage),
+        exchangeLanguageId: getLanguageId(params.exchangeLanguage),
         maxParticipants: params.memberCount,
       },
       post: {
@@ -144,47 +153,97 @@ const GroupCreateStep4 = () => {
         imageUrls: params.imageUrls || [],
       },
     };
+    console.log('[게시글 생성 API 요청 데이터]', {
+      ...requestData,
+      imageUrlsCount: requestData.post.imageUrls.length,
+      imageUrls: requestData.post.imageUrls,
+    });
 
     // API 호출
     createPost(requestData, {
       onSuccess: response => {
         console.log('모임 게시글 생성 성공:', response.data);
 
-        // 성공 토스트 표시
-        toastService.success(
-          t('group.create.success.title'),
-          t('group.create.success.message'),
-        );
-
-        // 게시글 ID 추출
+        // 게시글 ID와 모임 ID 추출
         const postId = response.data?.postId;
+        const meetingId = response.data?.postId;
 
-        if (postId) {
-          // 먼저 메인 화면의 Group 탭으로 이동
-          navigation.reset({
-            index: 0,
-            routes: [
-              {
-                name: 'Main',
-                params: {
-                  screen: 'MainTabs',
-                  params: {
-                    screen: 'Group',
+        if (postId && meetingId) {
+          // 게시글 생성 후 자동으로 그룹 채팅방 참여
+          joinChatRoom(meetingId, {
+            onSuccess: chatResponse => {
+              console.log('그룹 채팅방 참여 성공:', chatResponse.data);
+
+              // 성공 토스트 표시
+              toastService.success(
+                t('group.create.success.title'),
+                '모임이 생성되고 채팅방에 참여되었습니다!',
+              );
+
+              // 먼저 메인 화면의 Group 탭으로 이동
+              navigation.reset({
+                index: 0,
+                routes: [
+                  {
+                    name: 'Main',
                     params: {
-                      screen: 'GroupList',
+                      screen: 'MainTabs',
+                      params: {
+                        screen: 'Group',
+                        params: {
+                          screen: 'GroupList',
+                        },
+                      },
                     },
                   },
-                },
-              },
-            ],
-          });
+                ],
+              });
 
-          // 잠시 후 상세 화면으로 이동
-          setTimeout(() => {
-            navigation.navigate('GroupDetail', {postId});
-          }, 100);
+              // 잠시 후 상세 화면으로 이동
+              setTimeout(() => {
+                navigation.navigate('GroupDetail', {postId});
+              }, 100);
+            },
+            onError: chatError => {
+              console.error('그룹 채팅방 참여 실패:', chatError);
+
+              // 채팅방 참여는 실패했지만 게시글은 성공했으므로 부분 성공 메시지
+              toastService.success(
+                t('group.create.success.title'),
+                '모임이 생성되었습니다. (채팅방 참여는 나중에 시도해주세요)',
+              );
+
+              // 그래도 상세 화면으로 이동
+              navigation.reset({
+                index: 0,
+                routes: [
+                  {
+                    name: 'Main',
+                    params: {
+                      screen: 'MainTabs',
+                      params: {
+                        screen: 'Group',
+                        params: {
+                          screen: 'GroupList',
+                        },
+                      },
+                    },
+                  },
+                ],
+              });
+
+              setTimeout(() => {
+                navigation.navigate('GroupDetail', {postId});
+              }, 100);
+            },
+          });
         } else {
           // ID를 받지 못한 경우 그룹 목록으로 이동
+          toastService.success(
+            t('group.create.success.title'),
+            t('group.create.success.message'),
+          );
+
           navigation.reset({
             index: 0,
             routes: [
@@ -238,7 +297,17 @@ const GroupCreateStep4 = () => {
     if (Platform.OS === 'android') {
       setShowDatePicker(false);
       if (event.type === 'set' && selectedDate) {
-        setDate(selectedDate);
+        const minimumDateTime = getMinimumDateTime();
+        // 선택한 날짜가 최소 시간보다 이후인지 확인
+        if (selectedDate >= minimumDateTime) {
+          setDate(selectedDate);
+        } else {
+          // 최소 시간보다 이전인 경우 토스트 메시지 표시
+          toastService.error(
+            t('common.error'),
+            '모임 시간은 현재 시간으로부터 3시간 이후로 설정해주세요.',
+          );
+        }
       }
     } else {
       if (selectedDate) {
@@ -251,7 +320,17 @@ const GroupCreateStep4 = () => {
     if (Platform.OS === 'android') {
       setShowTimePicker(false);
       if (event.type === 'set' && selectedTime) {
-        setDate(selectedTime);
+        const minimumDateTime = getMinimumDateTime();
+        // 선택한 시간이 최소 시간보다 이후인지 확인
+        if (selectedTime >= minimumDateTime) {
+          setDate(selectedTime);
+        } else {
+          // 최소 시간보다 이전인 경우 토스트 메시지 표시
+          toastService.error(
+            t('common.error'),
+            '모임 시간은 현재 시간으로부터 3시간 이후로 설정해주세요.',
+          );
+        }
       }
     } else {
       if (selectedTime) {
@@ -261,13 +340,33 @@ const GroupCreateStep4 = () => {
   };
 
   const confirmDate = () => {
-    setDate(tempDate);
-    setShowDatePicker(false);
+    const minimumDateTime = getMinimumDateTime();
+    // 선택한 날짜가 최소 시간보다 이후인지 확인
+    if (tempDate >= minimumDateTime) {
+      setDate(tempDate);
+      setShowDatePicker(false);
+    } else {
+      // 최소 시간보다 이전인 경우 토스트 메시지 표시
+      toastService.error(
+        t('common.error'),
+        '모임 시간은 현재 시간으로부터 3시간 이후로 설정해주세요.',
+      );
+    }
   };
 
   const confirmTime = () => {
-    setDate(tempDate);
-    setShowTimePicker(false);
+    const minimumDateTime = getMinimumDateTime();
+    // 선택한 시간이 최소 시간보다 이후인지 확인
+    if (tempDate >= minimumDateTime) {
+      setDate(tempDate);
+      setShowTimePicker(false);
+    } else {
+      // 최소 시간보다 이전인 경우 토스트 메시지 표시
+      toastService.error(
+        t('common.error'),
+        '모임 시간은 현재 시간으로부터 3시간 이후로 설정해주세요.',
+      );
+    }
   };
 
   const handleAddressSelect = (data: DaumPostcodeResult) => {
@@ -389,7 +488,7 @@ const GroupCreateStep4 = () => {
         </View>
       </ScrollView>
 
-      <View style={styles.bottomContainer}>
+      <View style={[styles.bottomContainer, Platform.OS === 'android' && {paddingBottom: insets.bottom + 20}]}>
         <TouchableOpacity
           style={[
             styles.completeButton,
@@ -409,7 +508,13 @@ const GroupCreateStep4 = () => {
       {isPending && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color={colors.batteryChargedBlue} />
-          <Text style={styles.loadingText}>{t('common.loading')}</Text>
+          <Text style={styles.loadingText}>
+            {isCreatingPost
+              ? '모임을 생성하고 있습니다...'
+              : isJoiningChat
+              ? '채팅방에 참여하고 있습니다...'
+              : t('common.loading')}
+          </Text>
         </View>
       )}
 
@@ -431,6 +536,7 @@ const GroupCreateStep4 = () => {
                 mode="date"
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                 onChange={onDateChange}
+                minimumDate={getMinimumDateTime()}
                 style={styles.datePicker}
                 textColor={colors.charcoal}
                 accentColor={colors.batteryChargedBlue}
@@ -477,6 +583,7 @@ const GroupCreateStep4 = () => {
                 mode="time"
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                 onChange={onTimeChange}
+                minimumDate={getMinimumDateTime()}
                 style={styles.datePicker}
                 textColor={colors.charcoal}
                 accentColor={colors.batteryChargedBlue}
@@ -512,6 +619,7 @@ const GroupCreateStep4 = () => {
           mode="date"
           display="default"
           onChange={onDateChange}
+          minimumDate={getMinimumDateTime()}
           textColor={colors.charcoal}
           accentColor={colors.batteryChargedBlue}
           themeVariant="light"
@@ -525,6 +633,7 @@ const GroupCreateStep4 = () => {
           mode="time"
           display="default"
           onChange={onTimeChange}
+          minimumDate={getMinimumDateTime()}
           textColor={colors.charcoal}
           accentColor={colors.batteryChargedBlue}
           themeVariant="light"

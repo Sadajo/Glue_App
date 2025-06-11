@@ -29,6 +29,7 @@ const EmailInput = ({
   // 이메일 유효성 검사 - @pusan.ac.kr 도메인만 허용
   const isValidEmail = (email: string) => {
     const pusanEmailRegex = /^[^\s@]+@pusan\.ac\.kr$/;
+
     return pusanEmailRegex.test(email);
   };
 
@@ -54,7 +55,11 @@ const EmailInput = ({
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}>
       <View style={styles.titleContainer}>
-        <Text variant="h2" color={colors.richBlack} style={styles.title}>
+        <Text
+          variant="h2"
+          weight="semiBold"
+          color={colors.richBlack}
+          style={styles.title}>
           {t('signup.email.title')}
         </Text>
         <Text variant="body2" color={colors.charcoal} style={styles.subtitle}>

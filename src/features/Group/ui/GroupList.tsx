@@ -1,4 +1,4 @@
-import React, {useState, useCallback} from 'react';
+import React, {useState, useCallback, useEffect, useRef} from 'react';
 import {
   SafeAreaView,
   View,
@@ -8,6 +8,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
+  Animated,
 } from 'react-native';
 import {useTranslation} from 'react-i18next';
 import {GroupItemCard} from './components/GroupItemCard';
@@ -31,6 +32,47 @@ const CATEGORY_ID_MAP: Record<CategoryType, number | undefined> = {
 };
 
 /**
+ * 스켈레톤 아이템 컴포넌트
+ */
+const SkeletonItem: React.FC<{index: number}> = ({index}) => {
+  const opacity = useRef(new Animated.Value(0.3)).current;
+
+  useEffect(() => {
+    const animate = () => {
+      Animated.sequence([
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 800,
+          delay: index * 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          toValue: 0.3,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ]).start(() => animate());
+    };
+
+    animate();
+  }, [opacity, index]);
+
+  return (
+    <Animated.View style={[styles.skeletonItem, {opacity}]}>
+      <View style={styles.skeletonImage} />
+      <View style={styles.skeletonContent}>
+        <View style={styles.skeletonTitle} />
+        <View style={styles.skeletonDescription} />
+        <View style={styles.skeletonMeta}>
+          <View style={styles.skeletonCategory} />
+          <View style={styles.skeletonStats} />
+        </View>
+      </View>
+    </Animated.View>
+  );
+};
+
+/**
  * 모임 목록 화면 컴포넌트
  */
 const GroupList: React.FC = () => {
@@ -38,6 +80,7 @@ const GroupList: React.FC = () => {
   const {t} = useTranslation();
   const [isDropdownVisible, setIsDropdownVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<CategoryType>('all');
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   // 선택된 카테고리 ID 가져오기
   const selectedCategoryId = CATEGORY_ID_MAP[selectedCategory];
@@ -55,6 +98,19 @@ const GroupList: React.FC = () => {
 
   // 모든 페이지의 게시글을 하나의 배열로 병합
   const allPosts = data?.pages.flatMap(page => (page as any).data.posts) || [];
+
+  // 데이터 로딩 완료 시 페이드인 애니메이션
+  useEffect(() => {
+    if (!isLoading && allPosts.length > 0) {
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    } else if (isLoading) {
+      fadeAnim.setValue(0);
+    }
+  }, [isLoading, allPosts.length, fadeAnim]);
 
   // 게시글 추가 로딩 핸들러 (무한 스크롤)
   const handleLoadMore = useCallback(() => {
@@ -190,38 +246,46 @@ const GroupList: React.FC = () => {
       />
 
       {/* 모임 목록 */}
-      <FlatList
-        data={allPosts}
-        renderItem={renderPostItem}
-        keyExtractor={item => item.postId.toString()}
-        showsVerticalScrollIndicator={false}
-        onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.5}
-        refreshControl={
-          <RefreshControl
-            refreshing={isLoading && !isFetchingNextPage}
-            onRefresh={handleRefresh}
-            colors={['#1CBFDC']}
-            tintColor={'#1CBFDC'}
-          />
-        }
-        ListEmptyComponent={() => (
-          <View style={styles.emptyContainer}>
-            {isLoading ? (
-              <ActivityIndicator size="large" color="#1CBFDC" />
-            ) : (
-              <Text>{t('group.search.noResults')}</Text>
-            )}
+      <View style={{flex: 1}}>
+        {isLoading && allPosts.length === 0 ? (
+          <View style={styles.skeletonContainer}>
+            {Array.from({length: 3}).map((_, index) => (
+              <SkeletonItem key={index} index={index} />
+            ))}
           </View>
+        ) : (
+          <Animated.View style={{flex: 1, opacity: fadeAnim}}>
+            <FlatList
+              data={allPosts}
+              renderItem={renderPostItem}
+              keyExtractor={item => item.postId.toString()}
+              showsVerticalScrollIndicator={false}
+              onEndReached={handleLoadMore}
+              onEndReachedThreshold={0.5}
+              refreshControl={
+                <RefreshControl
+                  refreshing={false}
+                  onRefresh={handleRefresh}
+                  colors={['#1CBFDC']}
+                  tintColor={'#1CBFDC'}
+                />
+              }
+            ListEmptyComponent={() => (
+              <View style={styles.emptyContainer}>
+                <Text>{t('group.search.noResults')}</Text>
+              </View>
+            )}
+            ListFooterComponent={() =>
+              isFetchingNextPage ? (
+                <View style={styles.loadingFooter}>
+                  <ActivityIndicator size="small" color="#1CBFDC" />
+                </View>
+              ) : null
+            }
+            />
+          </Animated.View>
         )}
-        ListFooterComponent={() =>
-          isFetchingNextPage ? (
-            <View style={styles.loadingFooter}>
-              <ActivityIndicator size="small" color="#1CBFDC" />
-            </View>
-          ) : null
-        }
-      />
+      </View>
 
       {/* 글쓰기 버튼 */}
       <FloatingButton onPress={handleCreatePress} label={t('group.write')} />
@@ -346,6 +410,73 @@ const styles = StyleSheet.create({
   loadingFooter: {
     paddingVertical: 20,
     alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 8,
+    fontSize: 14,
+    color: '#666',
+  },
+  skeletonContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  skeletonItem: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  skeletonImage: {
+    width: 80,
+    height: 80,
+    backgroundColor: '#e9ecef',
+    borderRadius: 8,
+    marginRight: 12,
+  },
+  skeletonContent: {
+    flex: 1,
+    justifyContent: 'space-between',
+  },
+  skeletonTitle: {
+    height: 18,
+    backgroundColor: '#e9ecef',
+    borderRadius: 4,
+    marginBottom: 8,
+    width: '80%',
+  },
+  skeletonDescription: {
+    height: 14,
+    backgroundColor: '#e9ecef',
+    borderRadius: 4,
+    marginBottom: 12,
+    width: '100%',
+  },
+  skeletonMeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  skeletonCategory: {
+    height: 12,
+    backgroundColor: '#e9ecef',
+    borderRadius: 4,
+    width: 60,
+  },
+  skeletonStats: {
+    height: 12,
+    backgroundColor: '#e9ecef',
+    borderRadius: 4,
+    width: 80,
   },
 });
 

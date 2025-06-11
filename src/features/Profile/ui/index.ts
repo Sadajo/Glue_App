@@ -5,4 +5,8 @@ export {MyPageScreen} from './MyPageScreen';
 export {MyProfileDetailScreen} from './MyProfileDetailScreen';
 export {GroupHistoryScreen} from './GroupHistoryScreen';
 export {LikedGroupsScreen} from './LikedGroupsScreen';
+export {MyParticipatingMeetingsScreen} from './MyParticipatingMeetingsScreen';
+export {PrivacySettingsScreen} from './PrivacySettingsScreen';
+export {default as GuestbookScreen} from './GuestbookScreen';
+export {default as DescriptionEditScreen} from './DescriptionEditScreen';
 export {default as UserProfileDetail} from './UserProfileDetail';

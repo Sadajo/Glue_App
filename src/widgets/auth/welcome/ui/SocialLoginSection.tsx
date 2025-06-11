@@ -146,10 +146,10 @@ export const SocialLoginSection = () => {
       try {
         // iOS Apple 로그인 처리
         if (Platform.OS === 'ios') {
-          // 애플 로그인 요청
+          // 애플 로그인 요청 (새로운 인증 요청)
           const appleAuthRequestResponse = await appleAuth.performRequest({
-            requestedOperation: 0, // appleAuth.Operation.LOGIN의 값은 0입니다
-            requestedScopes: [1, 0], // FULL_NAME(1), EMAIL(0)
+            requestedOperation: appleAuth.Operation.LOGIN,
+            requestedScopes: [appleAuth.Scope.EMAIL, appleAuth.Scope.FULL_NAME],
           });
 
           // 인증 상태 확인
@@ -168,8 +168,12 @@ export const SocialLoginSection = () => {
             fcmToken,
           });
 
-          if (!authorizationCode) {
-            throw new Error(t('auth.appleNoAuthCodeError'));
+          if (!identityToken) {
+            throw new Error(t('auth.appleNoTokenError'));
+          }
+
+          if (!fcmToken) {
+            throw new Error('FCM 토큰을 가져올 수 없습니다.');
           }
 
           // 토스트 메시지
@@ -180,9 +184,9 @@ export const SocialLoginSection = () => {
           });
 
           try {
-            // 애플 인증 코드로 서버에 로그인 시도
+            // 애플 identityToken으로 서버에 로그인 시도
             const response = await appleSignin.mutateAsync({
-              authorizationCode,
+              idToken: identityToken,
               fcmToken,
             });
 
@@ -210,8 +214,8 @@ export const SocialLoginSection = () => {
               throw new Error(response.message || t('auth.loginFailed'));
             }
           } catch (apiError) {
-            if (apiError == 'Error: 등록되지 않은 사용자입니다.') {
-              // 회원가입 화면으로 이동하면서 애플 인증 코드 전달
+            if (apiError == 'Error: 존재하지 않는 사용자입니다') {
+              // 기존 애플 인증 정보로 회원가입으로 이동
               Toast.show({
                 type: 'info',
                 text1: t('auth.newUserRegistration'),
@@ -228,14 +232,12 @@ export const SocialLoginSection = () => {
               navigation.navigate('Auth', {
                 screen: 'SignUp',
                 params: {
-                  // 서버에서 요구하는 필드명과 일치하게 파라미터 전달
-                  authorizationCode, // 애플 인증 코드
-                  email, // 이메일
-                  userName, // 사용자 이름
-                  fcmToken, // FCM 토큰 추가
-
-                  // 나머지 필드는 회원가입 페이지에서 사용자가 입력해야 함
-                  isAppleSignUp: true, // 애플 회원가입임을 표시
+                  // 기존 identityToken 재사용
+                  idToken: identityToken,
+                  email: email,
+                  userName,
+                  fcmToken,
+                  isAppleSignUp: true,
                 },
               });
             } else {

@@ -1,7 +1,9 @@
 ﻿// src/features/Profile/model/useProfile.ts
 
 import { useApiQuery, useApiMutation } from '@/shared/lib/api/hooks';
+import { useQuery } from '@tanstack/react-query';
 import { mockProfileApi as api } from './api';
+import { getUserLikes, getMeetingsHistory, getMyMeetings } from '../api/profileApi';
 import {
   UserProfile,
   GroupHistoryItem,
@@ -71,5 +73,70 @@ export function useLikedGroups() {
     isLoading: likedQuery.isLoading,
     isError: likedQuery.isError,
     refetchLiked: likedQuery.refetch,
+  };
+}
+
+/**
+ * 사용자 좋아요 목록 조회 훅 (실제 API 사용)
+ */
+export function useUserLikes(targetUserId: number) {
+  const likesQuery = useQuery({
+    queryKey: ['profile', 'likes', targetUserId.toString()],
+    queryFn: () => getUserLikes(targetUserId),
+    enabled: !!targetUserId,
+    staleTime: 5 * 60 * 1000,
+    retry: 2,
+  });
+
+  return {
+    posts: likesQuery.data?.posts || [],
+    isLoading: likesQuery.isLoading,
+    isError: likesQuery.isError,
+    error: likesQuery.error,
+    refetch: likesQuery.refetch,
+  };
+}
+
+/**
+ * 사용자 모임 히스토리 조회 훅 (실제 API 사용)
+ */
+export function useMeetingsHistory(targetUserId: number) {
+  const historyQuery = useQuery({
+    queryKey: ['profile', 'meetings-history', targetUserId.toString()],
+    queryFn: () => getMeetingsHistory(targetUserId),
+    enabled: !!targetUserId,
+    staleTime: 5 * 60 * 1000,
+    retry: 2,
+  });
+
+  return {
+    hostedMeetings: historyQuery.data?.hostedMeetings || [],
+    joinedMeetings: historyQuery.data?.joinedMeetings || [],
+    isLoading: historyQuery.isLoading,
+    isError: historyQuery.isError,
+    error: historyQuery.error,
+    refetch: historyQuery.refetch,
+  };
+}
+
+/**
+ * 내가 참여 중인 모임 조회 훅 (실제 API 사용)
+ */
+export function useMyMeetings() {
+  const myMeetingsQuery = useQuery({
+    queryKey: ['profile', 'my-meetings'],
+    queryFn: () => getMyMeetings(),
+    staleTime: 5 * 60 * 1000,
+    retry: 2,
+  });
+
+  return {
+    hostedMeetings: myMeetingsQuery.data?.hostedMeetings || [],
+    joinedMeetings: myMeetingsQuery.data?.joinedMeetings || [],
+    totalMeetings: (myMeetingsQuery.data?.hostedMeetings?.length || 0) + (myMeetingsQuery.data?.joinedMeetings?.length || 0),
+    isLoading: myMeetingsQuery.isLoading,
+    isError: myMeetingsQuery.isError,
+    error: myMeetingsQuery.error,
+    refetch: myMeetingsQuery.refetch,
   };
 }

@@ -89,7 +89,6 @@ export type GroupStackParamList = {
   CreateGroup: undefined;
   GroupSearch: undefined;
   UserProfile: {userId: number};
-  DmChat: {dmChatRoomId: number};
   GroupCreate: undefined;
   GroupCreateStep2: undefined;
   GroupCreateStep3: undefined;
@@ -105,7 +104,7 @@ export interface GroupListProps {
 }
 
 export interface GroupDetailProps {
-  navigation: GroupListNavigationProp;
+  navigation: any; // Use any for cross-stack navigation
   route: {
     params: {
       postId: string | number;

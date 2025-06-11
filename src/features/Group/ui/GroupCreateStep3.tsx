@@ -8,7 +8,9 @@ import {
   TextInput,
   Image,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {useTranslation} from 'react-i18next';
 import {
@@ -21,15 +23,24 @@ import {Text} from '../../../shared/ui/typography/Text';
 import {CameraIcon} from '../../../shared/assets/images';
 import GroupCreateHeader from './components/GroupCreateHeader';
 import {toastService} from '../../../shared/lib/notifications/toast';
+import {useImageUpload} from '../../../shared/lib/api/uploadHooks';
 
 const GroupCreateStep3 = () => {
   const navigation = useNavigation<any>();
   const route = useRoute();
   const {t} = useTranslation();
+  const insets = useSafeAreaInsets();
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [image, setImage] = useState<string | null>(null);
+  const [images, setImages] = useState<string[]>([]);
+  const [uploadedImageUrls, setUploadedImageUrls] = useState<string[]>([]);
+  const [uploadingImages, setUploadingImages] = useState<{
+    [key: number]: boolean;
+  }>({});
+
+  // 이미지 업로드 훅
+  const {mutate: uploadImage} = useImageUpload();
 
   const handleBack = () => {
     navigation.goBack();
@@ -39,12 +50,12 @@ const GroupCreateStep3 = () => {
     // route.params가 존재하는지 확인 후 사용
     const routeParams = route.params || {};
 
-    // 다음 페이지로 이동 - 파라미터 이름을 GroupCreateStep4에서 기대하는 이름과 일치시킴
+    // 다음 페이지로 이동 - 업로드된 이미지 URL들을 전달
     navigation.navigate('GroupCreateStep4', {
       ...routeParams,
       groupTitle: title,
       groupContent: content,
-      imageUrls: image ? [image] : [],
+      imageUrls: uploadedImageUrls,
     });
   };
 
@@ -80,6 +91,15 @@ const GroupCreateStep3 = () => {
   };
 
   const handleAddImage = async () => {
+    // 최대 5장까지만 업로드 가능
+    if (images.length >= 5) {
+      toastService.error(
+        t('common.error'),
+        '최대 5장까지만 업로드할 수 있습니다.',
+      );
+      return;
+    }
+
     const hasPermission = await checkAndRequestPermission();
 
     if (!hasPermission) {
@@ -106,10 +126,97 @@ const GroupCreateStep3 = () => {
       } else if (response.assets && response.assets.length > 0) {
         const selectedImage = response.assets[0];
         if (selectedImage.uri) {
-          setImage(selectedImage.uri);
-          toastService.success(t('group.create.step3.image_added'));
+          // 이미지를 로컬 배열에 추가
+          const newImages = [...images, selectedImage.uri];
+          setImages(newImages);
+
+          // 즉시 S3에 업로드 시작
+          uploadImageToS3(selectedImage.uri, newImages.length - 1);
         }
       }
+    });
+  };
+
+  const uploadImageToS3 = async (imageUri: string, index: number) => {
+    console.log(`[이미지 업로드 시작] 인덱스: ${index}, URI: ${imageUri}`);
+
+    // 업로드 시작 상태 설정
+    setUploadingImages(prev => ({...prev, [index]: true}));
+
+    // URL 안전한 파일명 생성 (한글, 특수문자 제거)
+    const timestamp = Date.now();
+    const randomId = Math.random().toString(36).substring(2, 8);
+    const fileName = `post_${timestamp}_${index}_${randomId}.jpg`;
+
+    console.log(`[이미지 업로드] 파일명: ${fileName}, 버킷: post_images`);
+
+    uploadImage(
+      {
+        bucketObject: 'post_images',
+        imageUri: imageUri,
+        fileName: fileName,
+        maxWidth: 1200, // 최대 가로 크기
+        maxHeight: 1200, // 최대 세로 크기
+        quality: 85, // 품질 (0-100, 높을수록 좋은 품질)
+      },
+      {
+        onSuccess: (publicUrl: string) => {
+          console.log(
+            `[이미지 업로드 성공] 인덱스: ${index}, 공개 URL: ${publicUrl}`,
+          );
+
+          // 업로드된 URL을 배열에 추가
+          setUploadedImageUrls(prev => {
+            const newUrls = [...prev];
+            newUrls[index] = publicUrl;
+            console.log(`[업로드된 이미지 URLs 업데이트]`, newUrls);
+            return newUrls;
+          });
+
+          // 업로드 완료 상태 설정
+          setUploadingImages(prev => {
+            const newState = {...prev};
+            delete newState[index];
+            return newState;
+          });
+
+          toastService.success(`이미지 ${index + 1}이 업로드되었습니다.`);
+        },
+        onError: (error: Error) => {
+          console.error(`[이미지 업로드 실패] 인덱스: ${index}, 오류:`, error);
+
+          // 업로드 실패 시 이미지 제거
+          setImages(prev => {
+            const filtered = prev.filter((_, i) => i !== index);
+            console.log(`[이미지 제거 후 남은 이미지들]`, filtered);
+            return filtered;
+          });
+
+          // 업로드 상태 제거
+          setUploadingImages(prev => {
+            const newState = {...prev};
+            delete newState[index];
+            return newState;
+          });
+
+          toastService.error(
+            '이미지 업로드 실패',
+            error.message || '다시 시도해주세요.',
+          );
+        },
+      },
+    );
+  };
+
+  const removeImage = (index: number) => {
+    setImages(prev => prev.filter((_, i) => i !== index));
+    setUploadedImageUrls(prev => prev.filter((_, i) => i !== index));
+
+    // 업로드 중인 상태도 제거
+    setUploadingImages(prev => {
+      const newState = {...prev};
+      delete newState[index];
+      return newState;
     });
   };
 
@@ -159,43 +266,57 @@ const GroupCreateStep3 = () => {
 
         {/* 사진 추가 */}
         <View style={styles.imageContainer}>
-          {image ? (
-            <View style={styles.previewContainer}>
-              <Image
-                source={{uri: image}}
-                style={styles.imagePreview}
-                resizeMode="cover"
-              />
-              <TouchableOpacity
-                style={styles.removeImageButton}
-                onPress={() => setImage(null)}>
-                <Text style={styles.removeImageText}>X</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <TouchableOpacity
-              style={styles.addImageButton}
-              onPress={handleAddImage}>
-              <View style={styles.addImageContent}>
-                <CameraIcon style={styles.cameraIcon} />
-                <Text style={styles.addImageText}>
-                  {t('group.create.step3.image_count')}
-                </Text>
+          <View style={styles.imageGrid}>
+            {images.map((imageUri, index) => (
+              <View key={index} style={styles.previewContainer}>
+                <Image
+                  source={{uri: imageUri}}
+                  style={styles.imagePreview}
+                  resizeMode="cover"
+                />
+                {uploadingImages[index] && (
+                  <View style={styles.uploadingOverlay}>
+                    <ActivityIndicator size="small" color={colors.white} />
+                  </View>
+                )}
+                <TouchableOpacity
+                  style={styles.removeImageButton}
+                  onPress={() => removeImage(index)}>
+                  <Text style={styles.removeImageText}>×</Text>
+                </TouchableOpacity>
               </View>
-            </TouchableOpacity>
-          )}
+            ))}
+
+            {/* 이미지 추가 버튼 (5장 미만일 때만 표시) */}
+            {images.length < 5 && (
+              <TouchableOpacity
+                style={styles.addImageButton}
+                onPress={handleAddImage}>
+                <View style={styles.addImageContent}>
+                  <CameraIcon style={styles.cameraIcon} />
+                  <Text style={styles.addImageText}>{images.length}/5</Text>
+                </View>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       </ScrollView>
 
-      <View style={styles.bottomContainer}>
+      <View style={[styles.bottomContainer, Platform.OS === 'android' && {paddingBottom: insets.bottom + 20}]}>
         <TouchableOpacity
           style={[
             styles.nextButton,
-            title.trim() !== '' && content.trim() !== ''
+            title.trim() !== '' &&
+            content.trim() !== '' &&
+            Object.keys(uploadingImages).length === 0
               ? styles.activeButton
               : styles.inactiveButton,
           ]}
-          disabled={title.trim() === '' || content.trim() === ''}
+          disabled={
+            title.trim() === '' ||
+            content.trim() === '' ||
+            Object.keys(uploadingImages).length > 0
+          }
           onPress={handleNext}>
           <Text style={styles.nextButtonText}>{t('common.next')}</Text>
         </TouchableOpacity>
@@ -259,6 +380,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 19,
     marginBottom: 30,
   },
+  imageGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
   addImageButton: {
     width: 80,
     height: 80,
@@ -267,6 +393,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
+    borderStyle: 'dashed',
   },
   addImageContent: {
     alignItems: 'center',
@@ -292,8 +419,8 @@ const styles = StyleSheet.create({
   },
   removeImageButton: {
     position: 'absolute',
-    top: -10,
-    right: -10,
+    top: -8,
+    right: -8,
     width: 24,
     height: 24,
     borderRadius: 12,
@@ -303,8 +430,20 @@ const styles = StyleSheet.create({
   },
   removeImageText: {
     color: colors.white,
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: 'bold',
+    lineHeight: 16,
+  },
+  uploadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   bottomContainer: {
     paddingHorizontal: 19,

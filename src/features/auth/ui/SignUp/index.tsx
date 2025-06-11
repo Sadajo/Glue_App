@@ -21,6 +21,7 @@ import {
   useSendVerificationCode,
   useKakaoSignup,
   useAppleSignup,
+  useCheckNicknameDuplicate,
 } from '../../api';
 import Toast from 'react-native-toast-message';
 import {useTranslation} from 'react-i18next';
@@ -28,13 +29,14 @@ import ExchangeLanguageSelection from './screens/ExchangeLanguageSelection';
 import ExchangeLanguageLevelSelection from './screens/ExchangeLanguageLevelSelection';
 import {secureStorage} from '@/shared/lib/security';
 import {Department} from './data/departments';
+import {useProfileImageUploadAndUpdate} from '@shared/lib/api/profileImageHooks';
 
 // 네비게이션 타입 정의
 type RootStackParamList = {
   Welcome: undefined;
   SignUp: {
     kakaoOAuthId?: string;
-    authorizationCode?: string;
+    idToken?: string;
     email?: string;
     userName?: string;
     isAppleSignUp?: boolean;
@@ -48,7 +50,7 @@ type SignUpScreenProps = {
   route: {
     params?: {
       kakaoOAuthId?: string;
-      authorizationCode?: string;
+      idToken?: string;
       email?: string;
       userName?: string;
       isAppleSignUp?: boolean;
@@ -65,7 +67,9 @@ const SignUpScreen = ({navigation, route}: SignUpScreenProps) => {
   );
   const [name, setName] = useState('');
   const [gender, setGender] = useState<string | null>(null);
-  const [birthDate, setBirthDate] = useState<Date | null>(new Date());
+  const [birthDate, setBirthDate] = useState<Date | null>(
+    new Date(2002, 5, 24),
+  );
   const [nativeLanguage, setNativeLanguage] = useState<string | null>(null);
   const [languageLevel, setLanguageLevel] = useState<string | null>(null);
   const [university, setUniversity] = useState<string | null>(null);
@@ -85,6 +89,9 @@ const SignUpScreen = ({navigation, route}: SignUpScreenProps) => {
 
   // 이메일 인증 코드 발송 뮤테이션
   const sendVerificationCode = useSendVerificationCode();
+
+  // 닉네임 중복 확인 뮤테이션
+  const nicknameCheck = useCheckNicknameDuplicate();
 
   // 애니메이션 값
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -161,6 +168,17 @@ const SignUpScreen = ({navigation, route}: SignUpScreenProps) => {
 
     // 이메일 화면에서 다음 버튼 클릭 시 인증 코드 발송
     if (step === 11) {
+      // 개발 모드에서 test@test.com이면 인증 건너뛰기
+      if (__DEV__ && email === 'test@test.com') {
+        Toast.show({
+          type: 'success',
+          text1: '[DEV] 인증이 건너뛰어졌습니다',
+          position: 'bottom',
+        });
+        setStep(step + 1);
+        return;
+      }
+
       try {
         // 인증 코드 발송 중 알림
         Toast.show({
@@ -193,6 +211,40 @@ const SignUpScreen = ({navigation, route}: SignUpScreenProps) => {
       return;
     }
 
+    // 닉네임 화면에서 다음 버튼 클릭 시 중복 확인
+    if (step === 13) {
+      if (!nickname.trim()) {
+        Toast.show({
+          type: 'error',
+          text1: t('signup.nickname.required'),
+          position: 'bottom',
+        });
+        return;
+      }
+
+      try {
+        const isDuplicate = await checkNicknameDuplicate(nickname);
+        if (isDuplicate) {
+          Toast.show({
+            type: 'error',
+            text1: t('signup.nickname.duplicate'),
+            position: 'bottom',
+          });
+          return;
+        }
+
+        // 중복되지 않으면 다음 단계로 진행
+        setStep(step + 1);
+      } catch (error) {
+        Toast.show({
+          type: 'error',
+          text1: t('signup.nickname.checkFailed'),
+          position: 'bottom',
+        });
+      }
+      return;
+    }
+
     // 다음 단계로 이동
     setStep(step + 1);
   };
@@ -214,7 +266,14 @@ const SignUpScreen = ({navigation, route}: SignUpScreenProps) => {
   };
 
   const handleBirthDateChange = (date: Date) => {
-    setBirthDate(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selectedDate = new Date(date);
+    selectedDate.setHours(0, 0, 0, 0);
+
+    if (selectedDate < today) {
+      setBirthDate(date);
+    }
   };
 
   const handleNativeLanguageSelect = (language: string) => {
@@ -269,11 +328,17 @@ const SignUpScreen = ({navigation, route}: SignUpScreenProps) => {
 
   // 닉네임 중복 확인 함수
   const checkNicknameDuplicate = async (nickname: string): Promise<boolean> => {
-    // 실제 구현에서는 API 호출하여 중복 확인
-    // 예시: 글루라는 닉네임은 중복으로 설정
-    const isDuplicate = nickname.toLowerCase() === '글루';
-    setIsNicknameDuplicate(isDuplicate);
-    return isDuplicate;
+    try {
+      const result = await nicknameCheck.mutateAsync(nickname);
+      const isDuplicate = result.data; // true: 중복됨, false: 사용 가능
+      setIsNicknameDuplicate(isDuplicate);
+      return isDuplicate;
+    } catch (error) {
+      console.error('닉네임 중복 확인 실패:', error);
+      // 에러 발생 시 기본값으로 중복되지 않은 것으로 처리
+      setIsNicknameDuplicate(false);
+      return false;
+    }
   };
 
   // 회원가입 완료 후 시작하기
@@ -472,6 +537,7 @@ const SignUpScreen = ({navigation, route}: SignUpScreenProps) => {
   // handleSignup 함수 추가
   const kakaoSignup = useKakaoSignup();
   const appleSignup = useAppleSignup();
+  const profileImageUpload = useProfileImageUploadAndUpdate();
 
   const handleSignup = async () => {
     Toast.show({
@@ -537,10 +603,10 @@ const SignUpScreen = ({navigation, route}: SignUpScreenProps) => {
 
     try {
       // 카카오 로그인과 애플 로그인 구분
-      if (route.params?.isAppleSignUp && route.params?.authorizationCode) {
+      if (route.params?.isAppleSignUp && route.params?.idToken) {
         // 애플 회원가입 데이터 준비
         const appleSignupData = {
-          authorizationCode: route.params.authorizationCode,
+          idToken: route.params.idToken,
           realName: name,
           nickname: nickname,
           gender: genderValue,
@@ -551,7 +617,7 @@ const SignUpScreen = ({navigation, route}: SignUpScreenProps) => {
           majorVisibility: visibility,
           email: email,
           school: schoolId,
-          profileImageUrl: profilePhotoUri || '',
+          profileImageUrl: '', // 나중에 업로드 예정
           systemLanguage: systemLanguageValue,
           languageMain: getLanguageId(nativeLanguage),
           languageMainLevel: getLevelId(languageLevel),
@@ -560,7 +626,6 @@ const SignUpScreen = ({navigation, route}: SignUpScreenProps) => {
           meetingVisibility: visibility,
           likeVisibility: visibility,
           guestbooksVisibility: visibility,
-          fcmToken: route.params?.fcmToken, // FCM 토큰 추가
         };
 
         // 애플 회원가입 API 호출
@@ -573,6 +638,39 @@ const SignUpScreen = ({navigation, route}: SignUpScreenProps) => {
           // accessToken 저장
           if (response.data && response.data.accessToken) {
             await secureStorage.saveToken(response.data.accessToken);
+
+            // 토큰이 완전히 저장될 때까지 잠시 대기
+            await new Promise(resolve => setTimeout(resolve, 200));
+
+            // 프로필 이미지가 있으면 업로드
+            if (profilePhotoUri) {
+              try {
+                Toast.show({
+                  type: 'info',
+                  text1: t('signup.profilePhoto.uploading'),
+                  position: 'bottom',
+                });
+
+                await profileImageUpload.mutateAsync({
+                  imageUri: profilePhotoUri,
+                  fileName: `profile_${nickname}_${Date.now()}.jpg`,
+                });
+
+                Toast.show({
+                  type: 'success',
+                  text1: t('signup.profilePhoto.uploadSuccess'),
+                  position: 'bottom',
+                });
+              } catch (uploadError) {
+                console.error('프로필 이미지 업로드 실패:', uploadError);
+                Toast.show({
+                  type: 'warning',
+                  text1: t('signup.profilePhoto.uploadFailed'),
+                  text2: '나중에 프로필에서 설정할 수 있습니다.',
+                  position: 'bottom',
+                });
+              }
+            }
 
             Toast.show({
               type: 'success',
@@ -607,7 +705,7 @@ const SignUpScreen = ({navigation, route}: SignUpScreenProps) => {
           majorVisibility: visibility,
           email,
           school: schoolId,
-          profileImageUrl: profilePhotoUri || '',
+          profileImageUrl: '', // 나중에 업로드 예정
           systemLanguage: systemLanguageValue,
           languageMain: getLanguageId(nativeLanguage),
           languageMainLevel: getLevelId(languageLevel),
@@ -629,6 +727,39 @@ const SignUpScreen = ({navigation, route}: SignUpScreenProps) => {
           // accessToken 저장
           if (response.data && response.data.accessToken) {
             await secureStorage.saveToken(response.data.accessToken);
+
+            // 토큰이 완전히 저장될 때까지 잠시 대기
+            await new Promise(resolve => setTimeout(resolve, 200));
+
+            // 프로필 이미지가 있으면 업로드
+            if (profilePhotoUri) {
+              try {
+                Toast.show({
+                  type: 'info',
+                  text1: t('signup.profilePhoto.uploading'),
+                  position: 'bottom',
+                });
+
+                await profileImageUpload.mutateAsync({
+                  imageUri: profilePhotoUri,
+                  fileName: `profile_${nickname}_${Date.now()}.jpg`,
+                });
+
+                Toast.show({
+                  type: 'success',
+                  text1: t('signup.profilePhoto.uploadSuccess'),
+                  position: 'bottom',
+                });
+              } catch (uploadError) {
+                console.error('프로필 이미지 업로드 실패:', uploadError);
+                Toast.show({
+                  type: 'warning',
+                  text1: t('signup.profilePhoto.uploadFailed'),
+                  text2: '나중에 프로필에서 설정할 수 있습니다.',
+                  position: 'bottom',
+                });
+              }
+            }
 
             Toast.show({
               type: 'success',

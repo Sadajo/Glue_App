@@ -6,7 +6,9 @@ import {
   TouchableOpacity,
   StyleSheet,
   Modal,
+  Platform,
 } from 'react-native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {useTranslation} from 'react-i18next';
 import {ChevronDown} from '../../../shared/assets/images';
@@ -25,6 +27,7 @@ const GroupCreateStep2 = () => {
   const route = useRoute();
   const {t} = useTranslation();
   const {groupType} = route.params as RouteParams;
+  const insets = useSafeAreaInsets();
 
   const [myLanguage, setMyLanguage] = useState(
     t('signup.nativeLanguage.korean'),
@@ -158,7 +161,7 @@ const GroupCreateStep2 = () => {
         )}
       </ScrollView>
 
-      <View style={styles.bottomContainer}>
+      <View style={[styles.bottomContainer, Platform.OS === 'android' && {paddingBottom: insets.bottom + 20}]}>
         <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
           <Text style={styles.nextButtonText}>{t('common.next')}</Text>
         </TouchableOpacity>

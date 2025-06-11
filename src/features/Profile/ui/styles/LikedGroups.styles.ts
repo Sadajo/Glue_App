@@ -11,4 +11,27 @@ export const styles = StyleSheet.create({
   },
   likedTitle: { ...typography.subtitle1, color: semanticColors.text },
   likedMeta: { ...typography.body2, color: semanticColors.textSecondary },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  loadingText: {
+    ...typography.body1,
+    color: semanticColors.textSecondary,
+    marginTop: spacing.md,
+    textAlign: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  errorText: {
+    ...typography.body1,
+    color: semanticColors.error,
+    textAlign: 'center',
+  },
 });

@@ -149,6 +149,7 @@ export const groupListStyles = StyleSheet.create({
   itemImage: {
     width: 72,
     height: 72,
+    borderRadius: 8,
   },
 });
 

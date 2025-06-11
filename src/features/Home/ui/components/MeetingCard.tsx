@@ -22,7 +22,7 @@ const MeetingCard = ({
     <TouchableOpacity
       style={styles.card}
       onPress={() =>
-        navigation.navigate('Group', {
+        (navigation as any).navigate('Group', {
           screen: 'GroupDetail',
           params: {
             // id: card.id,
@@ -109,7 +109,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingVertical: 12,
     paddingHorizontal: 14,
-    marginRight: 8,
     shadowColor: '#0000000D',
     shadowOpacity: 0.1,
     shadowOffset: {
@@ -118,7 +117,7 @@ const styles = StyleSheet.create({
     },
     shadowRadius: 4,
     elevation: 4,
-    width: 280,
+    width: '100%',
   },
   cardHeader: {
     flexDirection: 'row',

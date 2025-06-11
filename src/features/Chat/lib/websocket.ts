@@ -1,312 +1,325 @@
+import 'text-encoding-polyfill';
 import {Client, IMessage} from '@stomp/stompjs';
-import {config} from '@/shared/config/env';
-import {secureStorage} from '@/shared/lib/security';
-import {DmMessageResponse} from '../api/api';
+import SockJS from 'sockjs-client';
+import {config} from '@shared/config/env';
+import {DmMessageResponse, GroupMessageResponse} from '../api/api';
+import {secureStorage} from '@shared/lib/security';
 
-// React Native에서 WebSocket 사용을 위한 설정
-if (typeof global !== 'undefined') {
-  // @ts-ignore
-  global.WebSocket = global.WebSocket || require('ws');
-}
-
-// WebSocket 연결 상태 타입
 export type WebSocketStatus =
   | 'disconnected'
   | 'connecting'
   | 'connected'
   | 'error';
 
-// 메시지 콜백 타입
-export type MessageCallback = (message: DmMessageResponse) => void;
-
-// WebSocket 서비스 클래스
 class WebSocketService {
   private client: Client | null = null;
   private status: WebSocketStatus = 'disconnected';
-  private messageCallbacks: Map<number, MessageCallback[]> = new Map();
-  private subscriptions: Map<string, any> = new Map();
-  private currentUserId: number | null = null;
+  private messageListener: ((message: DmMessageResponse) => void) | null = null;
+  private groupMessageListener:
+    | ((message: GroupMessageResponse) => void)
+    | null = null;
+  private statusChangeListener: ((status: WebSocketStatus) => void) | null =
+    null;
+  private userId: number | null = null;
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 5;
+  private groupChatRoomSubscriptions = new Map<number, any>(); // 그룹 채팅방 구독 관리
 
-  /**
-   * WebSocket URL 생성
-   */
-  private getWebSocketUrl(): string {
-    // HTTP URL을 WebSocket URL로 변환
-    const wsUrl = config.API_URL.replace('http://', 'ws://').replace(
-      'https://',
-      'wss://',
-    );
-    return `${wsUrl}/ws`;
+  constructor() {
+    // WebSocket 서비스 초기화
   }
 
-  /**
-   * WebSocket 연결
-   */
-  async connect(): Promise<void> {
-    if (this.status === 'connected' || this.status === 'connecting') {
-      return;
+  // WebSocket 연결
+  async connectWebSocket(userId: number): Promise<boolean> {
+    if (this.client?.connected) {
+      console.log('[WebSocketService] 이미 연결됨');
+      return true;
     }
 
-    try {
-      this.status = 'connecting';
+    this.userId = userId;
+    this.setStatus('connecting');
 
+    try {
       // JWT 토큰 가져오기
       const token = await secureStorage.getToken();
-      if (!token) {
-        throw new Error('인증 토큰이 없습니다.');
-      }
 
-      const wsUrl = this.getWebSocketUrl();
-      console.log('[WebSocket] 연결 시도:', wsUrl);
+      // STOMP 클라이언트 생성 (SockJS 사용)
+      const wsUrl = token
+        ? `${config.API_URL}/ws?token=${encodeURIComponent(token)}`
+        : `${config.API_URL}/ws`;
 
-      // STOMP 클라이언트 생성
       this.client = new Client({
-        brokerURL: wsUrl,
+        webSocketFactory: () => {
+          return new SockJS(wsUrl);
+        },
         connectHeaders: {
-          Authorization: `Bearer ${token}`,
+          Authorization: token ? `Bearer ${token}` : '',
+          userId: userId.toString(),
         },
         debug: str => {
-          console.log('[STOMP Debug]', str);
+          // 에러만 로그 출력
+          if (str.includes('ERROR')) {
+            console.error('[STOMP Error]', str);
+          }
         },
-        reconnectDelay: 5000,
-        heartbeatIncoming: 4000,
-        heartbeatOutgoing: 4000,
+        reconnectDelay: 0, // 자동 재연결 비활성화 (디버깅용)
+        heartbeatIncoming: 0, // 하트비트 비활성화 (React Native 호환성)
+        heartbeatOutgoing: 0,
+        connectionTimeout: 15000, // 연결 타임아웃 15초로 단축 (빠른 실패)
+        // React Native 호환성을 위한 추가 설정
+        forceBinaryWSFrames: false, // 텍스트 프레임 사용 (React Native 호환성)
+        appendMissingNULLonIncoming: true, // 들어오는 메시지에 NULL 추가
+        splitLargeFrames: true, // 큰 프레임 분할
       });
 
-      // 연결 성공 콜백
-      this.client.onConnect = () => {
-        console.log('[WebSocket] 연결됨');
-        this.status = 'connected';
+      // 연결 성공 이벤트
+      this.client.onConnect = _frame => {
+        this.setStatus('connected');
+        this.reconnectAttempts = 0;
+
+        // DM 메시지 구독
+        const subscriptionPath = `/queue/dm/${userId}`;
+        this.client?.subscribe(subscriptionPath, (message: IMessage) => {
+          try {
+            const dmMessage: DmMessageResponse = JSON.parse(message.body);
+            this.messageListener?.(dmMessage);
+          } catch (error) {
+            console.error('[WebSocketService] 메시지 파싱 에러:', error);
+          }
+        });
       };
 
-      // 연결 해제 콜백
-      this.client.onDisconnect = () => {
-        console.log('[WebSocket] 연결 해제됨');
-        this.status = 'disconnected';
-      };
-
-      // 에러 콜백
+      // 연결 에러 이벤트
       this.client.onStompError = frame => {
-        console.error('[WebSocket] STOMP 에러:', frame.headers['message']);
-        console.error('[WebSocket] 추가 정보:', frame.body);
-        this.status = 'error';
+        console.error('[WebSocketService] STOMP 에러:', frame.body);
+        this.setStatus('error');
       };
 
-      // WebSocket 에러 콜백
+      // WebSocket 에러 이벤트
       this.client.onWebSocketError = error => {
-        console.error('[WebSocket] WebSocket 에러:', error);
-        this.status = 'error';
+        console.error('[WebSocketService] WebSocket 에러:', error);
+        this.setStatus('error');
+      };
+
+      // WebSocket 연결 종료 이벤트
+      this.client.onWebSocketClose = _event => {
+        this.setStatus('disconnected');
+      };
+
+      // 연결 해제 이벤트
+      this.client.onDisconnect = () => {
+        this.setStatus('disconnected');
+
+        // 자동 재연결 시도
+        if (this.reconnectAttempts < this.maxReconnectAttempts) {
+          this.reconnectAttempts++;
+          setTimeout(() => {
+            if (this.userId) {
+              this.connectWebSocket(this.userId);
+            }
+          }, 3000 * this.reconnectAttempts);
+        }
       };
 
       // 연결 시작
-      this.client.activate();
+      try {
+        this.client.activate();
+      } catch (error) {
+        console.error(
+          '[WebSocketService] STOMP 클라이언트 활성화 실패:',
+          error,
+        );
+        this.setStatus('error');
+        return false;
+      }
+
+      // 연결 완료 대기 (30초 타임아웃)
+      return new Promise(resolve => {
+        const timeout = setTimeout(() => {
+          this.setStatus('error');
+          resolve(false);
+        }, 30000);
+
+        const checkConnection = () => {
+          if (this.client?.connected) {
+            clearTimeout(timeout);
+            resolve(true);
+          } else if (this.status === 'error') {
+            clearTimeout(timeout);
+            resolve(false);
+          } else {
+            setTimeout(checkConnection, 100);
+          }
+        };
+        checkConnection();
+      });
     } catch (error) {
-      console.error('[WebSocket] 연결 실패:', error);
-      this.status = 'error';
-      throw error;
+      console.error('[WebSocketService] 연결 실패:', error);
+      this.setStatus('error');
+      return false;
     }
   }
 
-  /**
-   * WebSocket 연결 해제
-   */
+  // 연결 상태 확인
+  isConnected(): boolean {
+    return this.client?.connected || false;
+  }
+
+  // 연결 대기
+  async waitForConnection(timeout: number = 10000): Promise<boolean> {
+    if (this.isConnected()) {
+      return true;
+    }
+
+    return new Promise(resolve => {
+      const timeoutId = setTimeout(() => {
+        resolve(false);
+      }, timeout);
+
+      const checkConnection = () => {
+        if (this.isConnected()) {
+          clearTimeout(timeoutId);
+          resolve(true);
+        } else {
+          setTimeout(checkConnection, 100);
+        }
+      };
+      checkConnection();
+    });
+  }
+
+  // 재연결
+  async reconnect(): Promise<void> {
+    this.disconnect();
+    if (this.userId) {
+      await this.connectWebSocket(this.userId);
+    }
+  }
+
+  // 연결 해제
   disconnect(): void {
+    // 모든 그룹 채팅방 구독 해제
+    this.unsubscribeFromAllGroupChatRooms();
+
     if (this.client) {
       this.client.deactivate();
       this.client = null;
     }
-
-    this.status = 'disconnected';
-    this.messageCallbacks.clear();
-    this.subscriptions.clear();
-    this.currentUserId = null;
-
-    console.log('[WebSocket] 모든 구독이 해제되었습니다.');
+    this.setStatus('disconnected');
+    this.userId = null;
+    this.reconnectAttempts = 0;
   }
 
-  /**
-   * 사용자별 메시지 구독 (문서 기준: /queue/dm/{userId})
-   */
-  subscribeToUserMessages(userId: number, _callback: MessageCallback): void {
-    if (!this.client || this.status !== 'connected') {
-      console.warn('[WebSocket] 연결되지 않음 - 사용자 메시지 구독 불가');
-      return;
-    }
-
-    this.currentUserId = userId;
-    const subscriptionKey = `user-messages-${userId}`;
-
-    // 이미 구독 중인 경우 구독하지 않음
-    if (this.subscriptions.has(subscriptionKey)) {
-      console.log(`[WebSocket] 사용자 ${userId} 메시지 이미 구독 중`);
-      return;
-    }
-
-    // 사용자 메시지 구독
-    const subscription = this.client.subscribe(
-      `/queue/dm/${userId}`,
-      (message: IMessage) => {
-        try {
-          const messageData: DmMessageResponse = JSON.parse(message.body);
-          console.log(
-            `[WebSocket] 사용자 ${userId} 새 메시지 수신:`,
-            messageData,
-          );
-
-          // 메시지가 속한 채팅방의 콜백들에게 알림
-          const dmChatRoomId = messageData.dmChatRoomId;
-          if (dmChatRoomId) {
-            this.handleNewMessage(dmChatRoomId, messageData);
-          }
-        } catch (error) {
-          console.error('[WebSocket] 사용자 메시지 파싱 에러:', error);
-        }
-      },
-    );
-
-    this.subscriptions.set(subscriptionKey, subscription);
-    console.log(`[WebSocket] 사용자 ${userId} 메시지 구독됨`);
-  }
-
-  /**
-   * 채팅방별 읽음 상태 구독 (문서 기준: /queue/dm/{dmChatRoomId}/readStatus)
-   */
-  subscribeToReadStatus(dmChatRoomId: number): void {
-    if (!this.client || this.status !== 'connected') {
-      console.warn('[WebSocket] 연결되지 않음 - 읽음 상태 구독 불가');
-      return;
-    }
-
-    const subscriptionKey = `read-status-${dmChatRoomId}`;
-
-    // 이미 구독 중인 경우 구독하지 않음
-    if (this.subscriptions.has(subscriptionKey)) {
-      return;
-    }
-
-    // 읽음 상태 구독
-    const subscription = this.client.subscribe(
-      `/queue/dm/${dmChatRoomId}/readStatus`,
-      (message: IMessage) => {
-        try {
-          const readStatusData = JSON.parse(message.body);
-          console.log(
-            `[WebSocket] 채팅방 ${dmChatRoomId} 읽음 상태 업데이트:`,
-            readStatusData,
-          );
-          // TODO: 읽음 상태 처리 로직 추가
-        } catch (error) {
-          console.error('[WebSocket] 읽음 상태 파싱 에러:', error);
-        }
-      },
-    );
-
-    this.subscriptions.set(subscriptionKey, subscription);
-    console.log(`[WebSocket] 채팅방 ${dmChatRoomId} 읽음 상태 구독됨`);
-  }
-
-  /**
-   * 채팅방 구독 (기존 메소드를 새로운 방식으로 변경)
-   */
-  subscribeToChatRoom(dmChatRoomId: number, callback: MessageCallback): void {
-    if (!this.client || this.status !== 'connected') {
-      console.warn('[WebSocket] 연결되지 않음 - 구독 불가');
-      return;
-    }
-
-    // 콜백 등록
-    if (!this.messageCallbacks.has(dmChatRoomId)) {
-      this.messageCallbacks.set(dmChatRoomId, []);
-    }
-    this.messageCallbacks.get(dmChatRoomId)!.push(callback);
-
-    // 현재 사용자 ID가 있으면 사용자 메시지 구독
-    if (this.currentUserId) {
-      this.subscribeToUserMessages(this.currentUserId, callback);
-    }
-
-    // 읽음 상태 구독
-    this.subscribeToReadStatus(dmChatRoomId);
-
-    console.log(`[WebSocket] 채팅방 ${dmChatRoomId} 구독됨`);
-  }
-
-  /**
-   * 채팅방 구독 해제
-   */
-  unsubscribeFromChatRoom(dmChatRoomId: number): void {
-    // 콜백 제거
-    this.messageCallbacks.delete(dmChatRoomId);
-
-    // 읽음 상태 구독 해제
-    const readStatusKey = `read-status-${dmChatRoomId}`;
-    const readStatusSubscription = this.subscriptions.get(readStatusKey);
-    if (readStatusSubscription) {
-      readStatusSubscription.unsubscribe();
-      this.subscriptions.delete(readStatusKey);
-      console.log(`[WebSocket] 채팅방 ${dmChatRoomId} 읽음 상태 구독 해제됨`);
-    }
-
-    console.log(`[WebSocket] 채팅방 ${dmChatRoomId} 구독 해제됨`);
-  }
-
-  /**
-   * 사용자 메시지 구독 해제
-   */
-  unsubscribeFromUserMessages(userId: number): void {
-    const subscriptionKey = `user-messages-${userId}`;
-    const subscription = this.subscriptions.get(subscriptionKey);
-    if (subscription) {
-      subscription.unsubscribe();
-      this.subscriptions.delete(subscriptionKey);
-      console.log(`[WebSocket] 사용자 ${userId} 메시지 구독 해제됨`);
-    }
-  }
-
-  /**
-   * 읽음 처리 메시지 전송
-   */
-  sendReadMessage(dmChatRoomId: number, receiverId: number): void {
-    if (!this.client || this.status !== 'connected') {
-      console.warn('[WebSocket] 연결되지 않음 - 읽음 처리 불가');
-      return;
-    }
-
-    this.client.publish({
-      destination: `/app/dm/${dmChatRoomId}/read-message`,
-      body: JSON.stringify({receiverId}),
-    });
-
-    console.log(
-      `[WebSocket] 읽음 처리 전송: 채팅방 ${dmChatRoomId}, 수신자 ${receiverId}`,
-    );
-  }
-
-  /**
-   * 새 메시지 처리
-   */
-  private handleNewMessage(
-    dmChatRoomId: number,
-    message: DmMessageResponse,
+  // 메시지 리스너 설정
+  setMessageListener(
+    listener: ((message: DmMessageResponse) => void) | null,
   ): void {
-    const callbacks = this.messageCallbacks.get(dmChatRoomId);
-    if (callbacks) {
-      callbacks.forEach(callback => callback(message));
+    this.messageListener = listener;
+  }
+
+  // 그룹 메시지 리스너 설정
+  setGroupMessageListener(
+    listener: ((message: GroupMessageResponse) => void) | null,
+  ): void {
+    this.groupMessageListener = listener;
+  }
+
+  // 그룹 채팅방 구독
+  subscribeToGroupChatRoom(groupChatroomId: number): boolean {
+    if (!this.client?.connected) {
+      console.error('[WebSocketService] WebSocket이 연결되지 않음');
+      return false;
+    }
+
+    // 이미 구독 중인지 확인
+    if (this.groupChatRoomSubscriptions.has(groupChatroomId)) {
+      console.log(
+        `[WebSocketService] 그룹 채팅방 ${groupChatroomId} 이미 구독 중`,
+      );
+      return true;
+    }
+
+    try {
+      const subscriptionPath = `/topic/group/${groupChatroomId}`;
+      const subscription = this.client.subscribe(
+        subscriptionPath,
+        (message: IMessage) => {
+          try {
+            const groupMessage: GroupMessageResponse = JSON.parse(message.body);
+            this.groupMessageListener?.(groupMessage);
+          } catch (error) {
+            console.error('[WebSocketService] 그룹 메시지 파싱 에러:', error);
+          }
+        },
+      );
+
+      this.groupChatRoomSubscriptions.set(groupChatroomId, subscription);
+      console.log(
+        `[WebSocketService] 그룹 채팅방 ${groupChatroomId} 구독 완료`,
+      );
+      return true;
+    } catch (error) {
+      console.error(
+        `[WebSocketService] 그룹 채팅방 ${groupChatroomId} 구독 실패:`,
+        error,
+      );
+      return false;
     }
   }
 
-  /**
-   * 현재 연결 상태 반환
-   */
+  // 그룹 채팅방 구독 해제
+  unsubscribeFromGroupChatRoom(groupChatroomId: number): void {
+    const subscription = this.groupChatRoomSubscriptions.get(groupChatroomId);
+    if (subscription) {
+      try {
+        subscription.unsubscribe();
+        this.groupChatRoomSubscriptions.delete(groupChatroomId);
+        console.log(
+          `[WebSocketService] 그룹 채팅방 ${groupChatroomId} 구독 해제 완료`,
+        );
+      } catch (error) {
+        console.error(
+          `[WebSocketService] 그룹 채팅방 ${groupChatroomId} 구독 해제 실패:`,
+          error,
+        );
+      }
+    }
+  }
+
+  // 모든 그룹 채팅방 구독 해제
+  unsubscribeFromAllGroupChatRooms(): void {
+    this.groupChatRoomSubscriptions.forEach((subscription, groupChatroomId) => {
+      try {
+        subscription.unsubscribe();
+        console.log(
+          `[WebSocketService] 그룹 채팅방 ${groupChatroomId} 구독 해제 완료`,
+        );
+      } catch (error) {
+        console.error(
+          `[WebSocketService] 그룹 채팅방 ${groupChatroomId} 구독 해제 실패:`,
+          error,
+        );
+      }
+    });
+    this.groupChatRoomSubscriptions.clear();
+  }
+
+  // 상태 변경 리스너 설정
+  onConnectionStatusChange(listener: (status: WebSocketStatus) => void): void {
+    this.statusChangeListener = listener;
+  }
+
+  // 현재 상태 반환
   getStatus(): WebSocketStatus {
     return this.status;
   }
 
-  /**
-   * 연결 상태 확인
-   */
-  isConnected(): boolean {
-    return this.status === 'connected';
+  // 상태 변경
+  private setStatus(status: WebSocketStatus): void {
+    if (this.status !== status) {
+      this.status = status;
+      this.statusChangeListener?.(status);
+    }
   }
 }
 
