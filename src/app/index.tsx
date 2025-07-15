@@ -1,7 +1,7 @@
 import React, {useEffect, useState, useCallback} from 'react';
 import {AppProvider} from './providers';
 import {AppNavigator} from './providers/navigation';
-import {View, ActivityIndicator, StyleSheet} from 'react-native';
+import {View, ActivityIndicator, StyleSheet, AppState} from 'react-native';
 import * as RootNavigation from './navigation/RootNavigation';
 import {useTheme} from './providers/theme';
 import {AppToast} from '@/shared/ui/Toast';
@@ -9,69 +9,98 @@ import {fcmService} from '@/shared/lib/firebase';
 import {localNotificationService} from '@/shared/lib/notifications/localNotification';
 import {logger} from '@/shared/lib/logger';
 import {secureStorage} from '@/shared/lib/security';
-import {jwtDecode} from 'jwt-decode';
+import NetInfo from '@react-native-community/netinfo';
 
 const App = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isTokenChecking, setIsTokenChecking] = useState(false);
   const {theme} = useTheme();
-
-  // JWT 토큰 만료 확인 함수
-  const isTokenExpired = (token: string): boolean => {
-    try {
-      const decoded = jwtDecode<{exp: number}>(token);
-      const currentTime = Date.now() / 1000;
-      return decoded.exp < currentTime;
-    } catch (error) {
-      logger.error('JWT 토큰 디코딩 실패:', error);
-      return true;
-    }
-  };
 
   // 자동 로그인 검증 함수
   const checkAutoLogin = useCallback(async (): Promise<boolean> => {
+    if (isTokenChecking) {
+      logger.info('토큰 검증이 이미 진행 중입니다.');
+      return isLoggedIn;
+    }
+
+    setIsTokenChecking(true);
     try {
       logger.info('자동 로그인 검증 시작');
 
-      // 저장된 토큰 가져오기
-      const token = await secureStorage.getToken();
+      // 개선된 토큰 검증 사용 (서버 검증 포함)
+      const isValid = await secureStorage.validateTokenCompletely();
 
-      if (!token) {
-        logger.info('저장된 토큰 없음 - 로그인 필요');
+      if (isValid) {
+        logger.info('자동 로그인 성공 - 토큰 검증 완료');
+        return true;
+      } else {
+        logger.info('자동 로그인 실패 - 토큰이 유효하지 않음');
         return false;
       }
-
-      // 토큰 만료 확인
-      if (isTokenExpired(token)) {
-        logger.info('토큰 만료됨 - 토큰 삭제 및 재로그인 필요');
-        await secureStorage.removeToken();
-        return false;
-      }
-
-      logger.info('자동 로그인 성공 - 유효한 토큰 확인됨');
-      return true;
     } catch (error) {
       logger.error('자동 로그인 검증 중 오류:', error);
       // 오류 발생 시 안전을 위해 토큰 삭제
       await secureStorage.removeToken();
       return false;
+    } finally {
+      setIsTokenChecking(false);
     }
-  }, []);
+  }, [isLoggedIn, isTokenChecking]);
+
+  // 앱 상태 변화 감지 및 토큰 재검증
+  useEffect(() => {
+    const handleAppStateChange = async (nextAppState: string) => {
+      if (nextAppState === 'active' && isLoggedIn) {
+        logger.info('앱이 포그라운드로 복귀 - 토큰 재검증 실행');
+        const isValid = await checkAutoLogin();
+        if (!isValid) {
+          setIsLoggedIn(false);
+        }
+      }
+    };
+
+    const subscription = AppState.addEventListener(
+      'change',
+      handleAppStateChange,
+    );
+    return () => subscription?.remove();
+  }, [isLoggedIn, checkAutoLogin]);
+
+  // 네트워크 상태 변화 감지
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      if (state.isConnected && isLoggedIn) {
+        logger.info('네트워크 연결됨 - 토큰 재검증 실행');
+        checkAutoLogin().then(isValid => {
+          if (!isValid) {
+            setIsLoggedIn(false);
+          }
+        });
+      }
+    });
+
+    return unsubscribe;
+  }, [isLoggedIn, checkAutoLogin]);
 
   useEffect(() => {
     // 앱 초기화 로직
     const initializeApp = async () => {
       try {
-        // 로컬 알림 서비스 초기화
+        // 1. 먼저 자동 로그인 처리 (가장 중요한 상태 결정)
+        const autoLoginResult = await checkAutoLogin();
+        setIsLoggedIn(autoLoginResult);
+
+        // 2. 로컬 알림 서비스 초기화
         localNotificationService.init();
 
-        // FCM 초기화 및 권한 요청
-        await fcmService.requestPermission();
+        // 3. FCM 관련 초기화는 병렬로 처리
+        await Promise.all([
+          fcmService.requestPermission(),
+          fcmService.registerDevice(),
+        ]);
 
-        // iOS의 경우 디바이스 등록 (Android는 내부적으로 무시됨)
-        await fcmService.registerDevice();
-
-        // FCM 토큰 가져오기 (백그라운드에서 진행하여 앱 로딩 속도에 영향 없도록)
+        // 4. FCM 토큰 가져오기 (백그라운드에서 진행하여 앱 로딩 속도에 영향 없도록)
         fcmService
           .getToken()
           .then(token => {
@@ -84,12 +113,10 @@ const App = () => {
           .catch(error => {
             logger.error('FCM 토큰 초기화 오류:', error);
           });
-
-        // 자동 로그인 처리
-        const autoLoginResult = await checkAutoLogin();
-        setIsLoggedIn(autoLoginResult);
       } catch (error) {
         logger.error('앱 초기화 오류:', error);
+        // 오류 발생 시에도 기본적으로 로그아웃 상태로
+        setIsLoggedIn(false);
       } finally {
         setIsLoading(false);
       }
@@ -116,56 +143,28 @@ const App = () => {
     // FCM Background 메시지 리스너 설정
     fcmService.registerBackgroundMessageListener(async message => {
       logger.info('Background 메시지 수신:', message);
-      // 백그라운드에서는 시스템 알림이 자동으로 표시되므로 추가 처리 불필요
-      // 필요시 데이터 저장이나 배지 카운트 업데이트 등 수행 가능
+      // 백그라운드에서 알림 처리
+      localNotificationService.showFCMNotification(message);
     });
 
-    // FCM 알림 탭 리스너 설정
-    const unsubscribeNotificationOpened =
-      fcmService.registerNotificationOpenedListener(message => {
-        logger.info('알림 탭으로 앱 실행:', message);
-        // 알림 데이터를 기반으로 적절한 화면으로 네비게이션
-        if (message.data) {
-          RootNavigation.navigateFromNotification(message.data);
-        }
-      });
-
-    // 앱이 종료된 상태에서 알림으로 실행된 경우 확인
-    fcmService.getInitialNotification().then(message => {
-      if (message) {
-        logger.info('앱 종료 상태에서 알림으로 실행:', message);
-        // 알림 데이터를 기반으로 적절한 화면으로 네비게이션
-        if (message.data) {
-          // 네비게이션이 준비될 때까지 약간의 지연 추가
-          setTimeout(() => {
-            RootNavigation.navigateFromNotification(message.data);
-          }, 1000);
-        }
-      }
-    });
-
-    // 컴포넌트 언마운트 시 정리
+    // 컴포넌트 언마운트 시 리스너 해제
     return () => {
       unsubscribeTokenRefresh();
       unsubscribeForegroundMessage();
-      unsubscribeNotificationOpened();
     };
   }, [checkAutoLogin]);
 
-  useEffect(() => {
-    // 인증 상태에 따른 초기 네비게이션 설정
-    if (!isLoading) {
-      if (isLoggedIn) {
-        // 로그인 상태인 경우 메인 화면으로 이동
-        RootNavigation.navigateToMain();
-      }
-      // 로그인되지 않은 상태는 기본적으로 Auth 스택으로 이동 (AppNavigator의 초기 경로)
+  // 네비게이션이 준비된 후 자동로그인 결과에 따라 네비게이션 실행
+  const handleNavigationReady = () => {
+    if (!isLoading && isLoggedIn) {
+      // 로그인 상태인 경우 메인 화면으로 이동
+      RootNavigation.navigateToMain();
     }
-  }, [isLoading, isLoggedIn]);
+  };
 
   return (
     <>
-      <AppProvider>
+      <AppProvider onNavigationReady={handleNavigationReady}>
         {isLoading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#1CBFDC" />

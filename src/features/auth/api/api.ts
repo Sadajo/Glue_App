@@ -50,49 +50,59 @@ export const signinWithKakao = async (
       fcmToken,
     });
 
-    console.log('카카오 로그인 서버 응답:', response.data);
+    const responseData = response.data as ApiResponseDto<KakaoSigninResponse>;
+    console.log('[API 응답] 카카오 로그인 성공:', responseData);
 
-    // 서버 응답 구조에 맞게 처리
-    return {
-      data: response.data.result,
-      success: response.data.isSuccess,
-      message: response.data.message || '',
-    };
+    if (responseData.isSuccess) {
+      // 토큰 저장
+      const {secureStorage} = await import('@/shared/lib/security');
+      await secureStorage.saveToken(responseData.result.accessToken);
+
+      return {
+        data: responseData.result,
+        success: true,
+        message: responseData.message,
+      };
+    } else {
+      return {
+        data: {accessToken: ''},
+        success: false,
+        message: responseData.message,
+      };
+    }
   } catch (error) {
+    console.error('[API 오류] 카카오 로그인 실패:', error);
+
     if (axios.isAxiosError(error)) {
-      // 네트워크 오류
+      // 네트워크 오류 처리
       if (!error.response) {
-        throw new Error('네트워크 연결에 문제가 있습니다.');
+        throw new Error(
+          '네트워크 연결에 문제가 있습니다. 인터넷 연결을 확인하세요.',
+        );
       }
 
-      if (error.response.data.message === '존재하지 않는 사용자입니다') {
-        return {
-          data: {accessToken: ''},
-          success: false,
-          message: '존재하지 않는 사용자입니다',
-        };
-      }
-      // HTTP 상태 코드별 에러 처리
       const status = error.response.status;
-      if (status === 400) {
-        throw new Error('잘못된 요청입니다. 카카오 토큰을 확인해주세요.');
+      console.log(`[API 오류] HTTP 상태: ${status}`);
+
+      if (status === 404) {
+        // 사용자 등록 필요
+        throw new NotRegisteredError('사용자가 등록되지 않았습니다.');
       } else if (status === 401) {
-        throw new Error('유효하지 않은 카카오 토큰입니다.');
-      } else if (status === 404) {
-        // 사용자가 등록되어 있지 않은 경우
-        throw new NotRegisteredError('등록되지 않은 사용자입니다.');
-      } else if (status >= 500) {
-        throw new Error('서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+        throw new Error('카카오 토큰이 유효하지 않습니다.');
+      } else if (status === 500) {
+        throw new Error(
+          '서버에 문제가 발생했습니다. 잠시 후 다시 시도해주세요.',
+        );
       }
 
-      // 기본 에러 메시지
+      // 기타 HTTP 오류
       const errorMessage =
-        error.response.data?.message || '카카오 로그인에 실패했습니다.';
+        error.response.data?.message || '로그인에 실패했습니다.';
       throw new Error(errorMessage);
     }
 
-    // 기타 에러
-    throw error;
+    // 기타 오류
+    throw new Error('예기치 못한 오류가 발생했습니다.');
   }
 };
 
@@ -302,11 +312,11 @@ export const signinWithApple = async (
         throw new Error('네트워크 연결에 문제가 있습니다.');
       }
 
-      if (error.response.data.message === '존재하지 않는 사용자입니다') {
+      if (error.response.data.message === '등록되지 않은 사용자입니다') {
         return {
           data: {accessToken: ''},
           success: false,
-          message: '존재하지 않는 사용자입니다',
+          message: '등록되지 않은 사용자입니다',
         };
       }
       // HTTP 상태 코드별 에러 처리

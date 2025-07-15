@@ -30,6 +30,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
   children,
 }) => {
   const [status, setStatus] = useState<WebSocketStatus>('disconnected');
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     // 웹소켓 상태 변경 리스너 설정
@@ -38,41 +39,50 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
       logger.info(`WebSocket 상태 변경: ${newStatus}`);
     });
 
-    // 앱 시작 시 자동 연결 시도
+    // 앱 초기화 완료를 기다린 후 WebSocket 연결 시도
     const initializeWebSocket = async () => {
       try {
-        const token = await secureStorage.getToken();
+        // 토큰 유효성을 포함하여 체크
+        const isTokenValid = await secureStorage.isTokenValid();
         const userId = await secureStorage.getUserId();
 
-        if (token && userId) {
+        if (isTokenValid && userId) {
           logger.info(
-            '토큰과 사용자 ID가 존재하여 WebSocket 연결을 시도합니다.',
+            '유효한 토큰과 사용자 ID가 존재하여 WebSocket 연결을 시도합니다.',
           );
           await webSocketService.connectWebSocket(userId);
         } else {
           logger.info(
-            '토큰 또는 사용자 ID가 없어 WebSocket 연결을 건너뜁니다.',
+            '유효한 토큰 또는 사용자 ID가 없어 WebSocket 연결을 건너뜁니다.',
           );
         }
       } catch (error) {
         logger.error('WebSocket 초기화 중 오류:', error);
+      } finally {
+        setIsInitialized(true);
       }
     };
 
-    initializeWebSocket();
+    // 약간의 지연을 주어 앱 초기화가 완료된 후 WebSocket 연결 시도
+    const timer = setTimeout(() => {
+      initializeWebSocket();
+    }, 1500); // 1.5초 지연
 
     // 주기적으로 토큰 상태를 확인하여 재연결 (로그인/로그아웃 감지)
     const intervalId = setInterval(async () => {
+      // 초기화가 완료된 후에만 주기적 체크 실행
+      if (!isInitialized) return;
+
       try {
-        const token = await secureStorage.getToken();
+        const isTokenValid = await secureStorage.isTokenValid();
         const userId = await secureStorage.getUserId();
         const isConnected = webSocketService.isConnected();
 
-        if (token && userId && !isConnected) {
-          logger.info('토큰이 있지만 연결되지 않음. 재연결 시도.');
+        if (isTokenValid && userId && !isConnected) {
+          logger.info('유효한 토큰이 있지만 연결되지 않음. 재연결 시도.');
           await webSocketService.connectWebSocket(userId);
-        } else if (!token && isConnected) {
-          logger.info('토큰이 없음. 연결 해제.');
+        } else if (!isTokenValid && isConnected) {
+          logger.info('토큰이 유효하지 않음. 연결 해제.');
           webSocketService.disconnect();
         }
       } catch (error) {
@@ -82,6 +92,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
 
     // 컴포넌트 언마운트 시 정리
     return () => {
+      clearTimeout(timer);
       clearInterval(intervalId);
       webSocketService.disconnect();
     };
@@ -109,10 +120,10 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
 
   const checkAndConnect = async () => {
     try {
-      const token = await secureStorage.getToken();
+      const isTokenValid = await secureStorage.isTokenValid();
       const userId = await secureStorage.getUserId();
 
-      if (token && userId && !webSocketService.isConnected()) {
+      if (isTokenValid && userId && !webSocketService.isConnected()) {
         logger.info('즉시 연결 확인 및 시도');
         await webSocketService.connectWebSocket(userId);
       }

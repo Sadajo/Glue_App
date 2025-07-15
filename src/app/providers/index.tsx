@@ -12,6 +12,7 @@ import {navigationRef} from '../navigation/RootNavigation';
 // 앱 프로바이더 타입
 interface AppProviderProps {
   children: ReactNode;
+  onNavigationReady?: () => void;
 }
 
 // 항상 라이트 모드 테마의 상태바 설정 컴포넌트
@@ -26,7 +27,13 @@ const ThemedStatusBar = () => {
 };
 
 // SafeArea 및 네비게이션 컨테이너
-const ThemedSafeAreaContainer = ({children}: {children: ReactNode}) => {
+const ThemedSafeAreaContainer = ({
+  children,
+  onNavigationReady,
+}: {
+  children: ReactNode;
+  onNavigationReady?: () => void;
+}) => {
   const {theme} = useTheme();
 
   return (
@@ -39,6 +46,7 @@ const ThemedSafeAreaContainer = ({children}: {children: ReactNode}) => {
       <ThemedStatusBar />
       <NavigationContainer
         ref={navigationRef}
+        onReady={onNavigationReady}
         onStateChange={state => {
           // 네비게이션 상태 변경 디버깅 로그
           console.log('Navigation State:', state);
@@ -53,14 +61,19 @@ const ThemedSafeAreaContainer = ({children}: {children: ReactNode}) => {
  * 앱 전체 프로바이더 컴포넌트
  * 모든 글로벌 프로바이더를 통합하여 제공합니다.
  */
-export const AppProvider = ({children}: AppProviderProps) => {
+export const AppProvider = ({
+  children,
+  onNavigationReady,
+}: AppProviderProps) => {
   return (
     <SafeAreaProvider>
       <QueryProvider>
         <ThemeProvider>
           <WebSocketProvider>
             <I18nextProvider i18n={i18n}>
-              <ThemedSafeAreaContainer>{children}</ThemedSafeAreaContainer>
+              <ThemedSafeAreaContainer onNavigationReady={onNavigationReady}>
+                {children}
+              </ThemedSafeAreaContainer>
             </I18nextProvider>
           </WebSocketProvider>
         </ThemeProvider>

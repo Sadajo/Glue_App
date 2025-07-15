@@ -7,6 +7,15 @@ import {jwtDecode} from 'jwt-decode';
 // 사용자 ID를 AsyncStorage에 저장하기 위한 키
 const USER_ID_STORAGE_KEY = 'user_id';
 
+// 토큰 캐시 및 동시 접근 제어를 위한 변수들
+let tokenCache: string | null = null;
+let tokenCacheTimestamp: number = 0;
+let isTokenLoading = false;
+let tokenValidationPromise: Promise<boolean> | null = null;
+
+// 토큰 캐시 유효 시간 (30초)
+const TOKEN_CACHE_DURATION = 30 * 1000;
+
 /**
  * 보안 스토리지 유틸리티
  * 민감한 데이터(토큰 등)를 안전하게 저장합니다.
@@ -21,6 +30,12 @@ export const secureStorage = {
         config.AUTH_STORAGE_KEY,
         token,
       );
+
+      // 캐시 업데이트
+      if (result) {
+        tokenCache = token;
+        tokenCacheTimestamp = Date.now();
+      }
 
       // 토큰 저장 후 사용자 ID를 추출하여 AsyncStorage에 저장
       try {
@@ -42,17 +57,43 @@ export const secureStorage = {
 
   /**
    * 저장된 인증 토큰을 가져옵니다.
+   * 캐시를 사용하여 성능을 향상시킵니다.
    */
   async getToken(): Promise<string | null> {
+    // 캐시된 토큰이 유효한지 확인
+    if (tokenCache && Date.now() - tokenCacheTimestamp < TOKEN_CACHE_DURATION) {
+      return tokenCache;
+    }
+
+    // 이미 토큰을 로딩 중인 경우 대기
+    if (isTokenLoading) {
+      return new Promise(resolve => {
+        const checkInterval = setInterval(() => {
+          if (!isTokenLoading) {
+            clearInterval(checkInterval);
+            resolve(tokenCache);
+          }
+        }, 10);
+      });
+    }
+
+    isTokenLoading = true;
     try {
       const credentials = await Keychain.getGenericPassword();
       if (credentials && credentials.password) {
+        tokenCache = credentials.password;
+        tokenCacheTimestamp = Date.now();
         return credentials.password;
       }
+
+      tokenCache = null;
       return null;
     } catch (error) {
       logger.error('Failed to get auth token', error);
+      tokenCache = null;
       return null;
+    } finally {
+      isTokenLoading = false;
     }
   },
 
@@ -61,6 +102,11 @@ export const secureStorage = {
    */
   async removeToken(): Promise<boolean> {
     try {
+      // 캐시 초기화
+      tokenCache = null;
+      tokenCacheTimestamp = 0;
+      tokenValidationPromise = null;
+
       await AsyncStorage.removeItem(USER_ID_STORAGE_KEY);
       return await Keychain.resetGenericPassword();
     } catch (error) {
@@ -71,11 +117,61 @@ export const secureStorage = {
 
   /**
    * 인증 토큰의 유효성을 확인합니다.
-   * 실제 구현에서는 토큰의 만료 시간 등을 검사할 수 있습니다.
+   * 토큰 존재 여부와 만료 시간을 검사합니다.
    */
   async isTokenValid(): Promise<boolean> {
+    // 진행 중인 검증이 있다면 대기
+    if (tokenValidationPromise) {
+      return tokenValidationPromise;
+    }
+
+    const validationPromise = this._performTokenValidation();
+    tokenValidationPromise = validationPromise;
+
+    return validationPromise;
+  },
+
+  /**
+   * 실제 토큰 검증을 수행하는 내부 메서드
+   */
+  async _performTokenValidation(): Promise<boolean> {
     const token = await this.getToken();
-    return !!token; // 단순 존재 여부 확인
+    if (!token) {
+      logger.info('저장된 토큰이 없습니다.');
+      return false;
+    }
+
+    try {
+      // 클라이언트 측 토큰 만료 검사
+      const decoded = jwtDecode<{exp: number}>(token);
+      const currentTime = Date.now() / 1000;
+      const bufferTime = 30; // 30초 버퍼 추가 (네트워크 지연 고려)
+      const isClientValid = decoded.exp > currentTime + bufferTime;
+
+      if (!isClientValid) {
+        logger.info('토큰이 만료되었습니다. 자동 삭제 중...');
+        await this.removeToken();
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      logger.error('JWT 토큰 검증 실패:', error);
+      // 토큰이 잘못된 형식이면 삭제
+      await this.removeToken();
+      return false;
+    } finally {
+      // 검증 완료 후 promise 초기화
+      tokenValidationPromise = null;
+    }
+  },
+
+  /**
+   * 전체 토큰 검증
+   * 자동 로그인 시 사용
+   */
+  async validateTokenCompletely(): Promise<boolean> {
+    return this.isTokenValid();
   },
 
   /**

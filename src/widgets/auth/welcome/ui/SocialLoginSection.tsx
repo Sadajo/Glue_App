@@ -99,7 +99,7 @@ export const SocialLoginSection = () => {
             throw new Error(response.message || t('auth.loginFailed'));
           }
         } catch (apiError) {
-          if (apiError == 'Error: 존재하지 않는 사용자입니다') {
+          if (apiError == 'Error: 등록되지 않은 사용자입니다') {
             // OAuth ID가 없으면 에러 처리
             if (!oauthId) {
               Toast.show({
@@ -214,7 +214,13 @@ export const SocialLoginSection = () => {
               throw new Error(response.message || t('auth.loginFailed'));
             }
           } catch (apiError) {
-            if (apiError == 'Error: 존재하지 않는 사용자입니다') {
+            console.log('apiError', apiError);
+            if (
+              (typeof apiError === 'string' &&
+                apiError.includes('등록되지 않은 사용자입니다')) ||
+              (apiError instanceof Error &&
+                apiError.message.includes('등록되지 않은 사용자입니다'))
+            ) {
               // 기존 애플 인증 정보로 회원가입으로 이동
               Toast.show({
                 type: 'info',
