@@ -1,6 +1,7 @@
 import React, {useState, useEffect, useCallback} from 'react';
 import {StyleSheet, TouchableOpacity, View} from 'react-native';
 import {useTranslation} from 'react-i18next';
+import {useNavigation} from '@react-navigation/native';
 import {CategorySectionProps} from '../../model/types';
 import MeetingCard from './MeetingCard';
 import {Text} from '../../../../shared/ui/typography/Text';
@@ -22,7 +23,7 @@ interface CategorySectionPropsWithApi
   extends Omit<CategorySectionProps, 'cards'> {
   apiFunction: (
     size: number,
-  ) => Promise<{success: boolean; data: PopularPost[]}>;
+  ) => Promise<{success: boolean; data: PopularPost[]; message?: string}>;
   icon: React.ReactNode;
   backgroundColor?: string;
 }
@@ -34,8 +35,17 @@ const CategorySection = ({
   backgroundColor,
 }: CategorySectionPropsWithApi) => {
   const {t} = useTranslation();
+  const navigation = useNavigation();
   const [cards, setCards] = useState<TransformedMeetingCard[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // 더보기 버튼 클릭 핸들러
+  const handleSeeAllPress = useCallback(() => {
+    (navigation as any).navigate('PopularPostsList', {
+      title: title,
+      apiFunction: apiFunction,
+    });
+  }, [navigation, title, apiFunction]);
 
   // 카테고리 ID에서 배경색으로 변환
   const getCategoryColorFromId = useCallback((categoryId: number): string => {
@@ -144,7 +154,7 @@ const CategorySection = ({
             {title}
           </Text>
         </View>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={handleSeeAllPress}>
           <Text variant="body2" color="#9DA2AF" style={styles.seeAllText}>
             {t('home.seeAll')}
           </Text>

@@ -5,6 +5,7 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTranslation} from 'react-i18next';
 // 홈/게시판 화면 컴포넌트 임포트
 import {HomeScreen} from '@features/Home';
+import PopularPostsList from '@features/Home/ui/PopularPostsList';
 
 // 모임글 화면 컴포넌트 임포트
 import {
@@ -429,6 +430,14 @@ export const AppNavigator = () => {
         name="GroupChatRoomScreen"
         component={GroupChatRoomScreen}
         options={{headerShown: false}}
+      />
+      <RootStack.Screen
+        name="PopularPostsList"
+        component={PopularPostsList}
+        options={{
+          headerShown: true,
+          title: '인기 게시글',
+        }}
       />
     </RootStack.Navigator>
   );

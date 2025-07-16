@@ -110,10 +110,44 @@ export const getPopularPosts = async (size: number = 2) => {
 
     console.log('인기 게시글 응답:', response.data);
 
+    // 응답 데이터 안전하게 처리
+    const result = response.data.result || {};
+    const isSuccess = response.data.isSuccess || false;
+    const message = response.data.message || '';
+
+    console.log('result 구조 확인:', result);
+    console.log('result의 타입:', typeof result);
+    console.log('result의 키들:', Object.keys(result));
+
+    // result가 배열인지 확인
+    let posts = [];
+    if (Array.isArray(result)) {
+      posts = result;
+    } else if (result && typeof result === 'object') {
+      // result가 객체인 경우, 일반적인 키들을 확인
+      if (result.posts) {
+        posts = result.posts;
+      } else if (result.data) {
+        posts = result.data;
+      } else if (result.list) {
+        posts = result.list;
+      } else {
+        // result 객체의 모든 값 중 배열인 것을 찾기
+        const values = Object.values(result);
+        const arrayValue = values.find(value => Array.isArray(value));
+        if (arrayValue) {
+          posts = arrayValue;
+        }
+      }
+    }
+
+    console.log('최종 추출된 posts:', posts);
+    console.log('posts는 배열인가?', Array.isArray(posts));
+
     return {
-      data: response.data.result,
-      success: response.data.isSuccess,
-      message: response.data.message || '',
+      data: Array.isArray(posts) ? posts : [],
+      success: isSuccess,
+      message: message,
     };
   } catch (error) {
     console.error('인기 게시글 조회 실패:', error);
@@ -168,10 +202,44 @@ export const getLanguageMatchPosts = async (size: number = 2) => {
 
     console.log('언어 교환 모임 응답:', response.data);
 
+    // 응답 데이터 안전하게 처리
+    const result = response.data.result || {};
+    const isSuccess = response.data.isSuccess || false;
+    const message = response.data.message || '';
+
+    console.log('result 구조 확인:', result);
+    console.log('result의 타입:', typeof result);
+    console.log('result의 키들:', Object.keys(result));
+
+    // result가 배열인지 확인
+    let posts = [];
+    if (Array.isArray(result)) {
+      posts = result;
+    } else if (result && typeof result === 'object') {
+      // result가 객체인 경우, 일반적인 키들을 확인
+      if (result.posts) {
+        posts = result.posts;
+      } else if (result.data) {
+        posts = result.data;
+      } else if (result.list) {
+        posts = result.list;
+      } else {
+        // result 객체의 모든 값 중 배열인 것을 찾기
+        const values = Object.values(result);
+        const arrayValue = values.find(value => Array.isArray(value));
+        if (arrayValue) {
+          posts = arrayValue;
+        }
+      }
+    }
+
+    console.log('최종 추출된 posts:', posts);
+    console.log('posts는 배열인가?', Array.isArray(posts));
+
     return {
-      data: response.data.result,
-      success: response.data.isSuccess,
-      message: response.data.message || '',
+      data: Array.isArray(posts) ? posts : [],
+      success: isSuccess,
+      message: message,
     };
   } catch (error) {
     console.error('언어 교환 모임 조회 실패:', error);
