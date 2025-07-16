@@ -31,11 +31,23 @@ const InvitationBubble: React.FC<InvitationBubbleProps> = ({
   const acceptInvitationMutation = useAcceptInvitation();
   const joinGroupChatRoomMutation = useJoinGroupChatRoom();
 
-  // 실시간으로 초대장 상태 조회
+  // 실시간으로 초대장 상태 조회 (데이터가 없으면 빈 문자열로 처리)
   const {data: statusData, isLoading: isLoadingStatus} = useGetInvitationStatus(
-    invitationData.code,
-    true, // 항상 활성화
+    invitationData?.code || '',
+    Boolean(invitationData?.code), // 코드가 있을 때만 활성화
   );
+
+  // 초대 데이터 검증 (Hook 호출 후)
+  if (!invitationData || typeof invitationData !== 'object') {
+    console.error('InvitationBubble: 잘못된 초대 데이터:', invitationData);
+    return (
+      <View style={{padding: 16, backgroundColor: '#f5f5f5', borderRadius: 8}}>
+        <Text style={{color: '#666', textAlign: 'center'}}>
+          초대 메시지를 불러올 수 없습니다.
+        </Text>
+      </View>
+    );
+  }
 
   // 최신 상태 데이터 사용 (API에서 조회한 데이터 우선, 없으면 메시지 데이터 사용)
   const currentStatus = statusData?.data || invitationData;

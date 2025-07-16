@@ -14,6 +14,7 @@ import {styles} from './styles';
 import {ChatRoom} from '../../entities/types';
 import {TabHeader, MessageFilter} from '../../components';
 import {useTranslation} from 'react-i18next';
+import {formatInvitationMessageForDisplay} from '../../lib/invitationUtils';
 import {dummyProfile} from '@shared/assets/images';
 import {
   useHostedDmRooms,
@@ -410,21 +411,10 @@ const ChatRoomListScreen: React.FC<ChatRoomListScreenProps> = ({
 
     // [INVITATION] 접두사가 있는 초대장 메시지인지 확인
     if (lastMessage.startsWith('[INVITATION]')) {
-      try {
-        // JSON 부분 추출
-        const jsonPart = lastMessage.replace('[INVITATION]', '');
-        const invitationData = JSON.parse(jsonPart);
-
-        // 초대장 정보를 기반으로 읽기 쉬운 메시지 생성
-        return t('invitation.shortMessage', {
-          senderName: invitationData.senderName || t('messages.host'),
-          inviteeName: invitationData.inviteeName || t('messages.guest'),
-        });
-      } catch (error) {
-        // JSON 파싱 실패 시 기본 메시지
-        console.error('초대장 메시지 파싱 실패:', error);
-        return t('invitation.shortMessageDefault');
-      }
+      return formatInvitationMessageForDisplay(
+        lastMessage,
+        t('invitation.shortMessageDefault'),
+      );
     }
 
     // 일반 메시지는 그대로 반환

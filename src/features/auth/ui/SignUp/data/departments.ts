@@ -1168,3 +1168,31 @@ export const getDepartmentNameByCode = (
 
   return getDepartmentName(department, language);
 };
+
+// 학교 ID와 이름 매핑
+export const getSchoolNameById = (
+  schoolId: number,
+  language: string = 'ko',
+): string => {
+  const schoolNames: Record<number, {ko: string; en: string}> = {
+    272: {ko: '부산대학교', en: 'Pusan National University'},
+    1: {ko: '서울대학교', en: 'Seoul National University'},
+    2: {ko: '연세대학교', en: 'Yonsei University'},
+    3: {ko: '고려대학교', en: 'Korea University'},
+    4: {ko: '성균관대학교', en: 'Sungkyunkwan University'},
+    5: {ko: '한양대학교', en: 'Hanyang University'},
+    6: {ko: '중앙대학교', en: 'Chung-Ang University'},
+    7: {ko: '경희대학교', en: 'Kyung Hee University'},
+    8: {ko: '이화여자대학교', en: 'Ewha Womans University'},
+    9: {ko: '서강대학교', en: 'Sogang University'},
+    10: {ko: '동국대학교', en: 'Dongguk University'},
+    // 필요에 따라 더 많은 학교 추가 가능
+  };
+
+  const school = schoolNames[schoolId];
+  if (!school) {
+    return language === 'ko' ? '알 수 없는 학교' : 'Unknown School';
+  }
+
+  return language === 'ko' ? school.ko : school.en;
+};

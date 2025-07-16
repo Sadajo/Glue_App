@@ -18,6 +18,10 @@ import {
 import {useUserProfile} from '../model/useUserProfile';
 import {getLanguageText, getLanguageLevelText} from '../model/utils';
 import {useTranslation} from 'react-i18next';
+import {
+  getDepartmentNameById,
+  getSchoolNameById,
+} from '@features/auth/ui/SignUp/data/departments';
 
 interface UserProfileDetailProps {
   route: {
@@ -56,7 +60,9 @@ const UserProfileDetail: React.FC<UserProfileDetailProps> = ({
   };
 
   const getGenderText = (gender: number) => {
-    return gender === 1 ? t('profile.editProfile.male') : t('profile.editProfile.female');
+    return gender === 1
+      ? t('profile.editProfile.male')
+      : t('profile.editProfile.female');
   };
 
   const getAgeFromBirthDate = (birthDate: string): number => {
@@ -64,36 +70,23 @@ const UserProfileDetail: React.FC<UserProfileDetailProps> = ({
     const birth = new Date(birthDate);
     let age = today.getFullYear() - birth.getFullYear();
     const monthDiff = today.getMonth() - birth.getMonth();
-    
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birth.getDate())
+    ) {
       age--;
     }
-    
+
     return age;
   };
 
   const getSchoolName = (schoolCode: number): string => {
-    // TODO: 실제 학교 코드 매핑 로직 구현
-    const schoolNames: Record<number, string> = {
-      1: '부산대학교',
-      2: '서울대학교',
-      3: '연세대학교',
-      4: '고려대학교',
-      // 추가 학교들...
-    };
-    return schoolNames[schoolCode] || '알 수 없는 학교';
+    return getSchoolNameById(schoolCode, 'ko');
   };
 
   const getMajorName = (majorCode: number): string => {
-    // TODO: 실제 전공 코드 매핑 로직 구현
-    const majorNames: Record<number, string> = {
-      1: '국어국문학과',
-      2: '영어영문학과',
-      3: '컴퓨터공학과',
-      4: '경영학과',
-      // 추가 전공들...
-    };
-    return majorNames[majorCode] || '알 수 없는 전공';
+    return getDepartmentNameById(majorCode, 'ko');
   };
 
   if (isLoading) {
@@ -163,7 +156,8 @@ const UserProfileDetail: React.FC<UserProfileDetailProps> = ({
             <View style={userProfileDetailStyles.infoItem}>
               <UserIcon width={20} height={20} color="#666666" />
               <Text style={userProfileDetailStyles.infoText}>
-                {getGenderText(userProfile.gender)}, {getAgeFromBirthDate(userProfile.birthDate)}세
+                {getGenderText(userProfile.gender)},{' '}
+                {getAgeFromBirthDate(userProfile.birthDate)}세
               </Text>
             </View>
           </View>
@@ -173,7 +167,8 @@ const UserProfileDetail: React.FC<UserProfileDetailProps> = ({
             <View style={userProfileDetailStyles.infoItem}>
               <SchoolIcon width={20} height={20} color="#666666" />
               <Text style={userProfileDetailStyles.infoText}>
-                {getSchoolName(userProfile.school)} {getMajorName(userProfile.major)}
+                {getSchoolName(userProfile.school)}{' '}
+                {getMajorName(userProfile.major)}
               </Text>
             </View>
           </View>
@@ -181,7 +176,9 @@ const UserProfileDetail: React.FC<UserProfileDetailProps> = ({
 
         {/* 언어 정보 */}
         <View style={userProfileDetailStyles.languageSection}>
-          <Text style={userProfileDetailStyles.sectionTitle}>{t('profile.languageSettings')}</Text>
+          <Text style={userProfileDetailStyles.sectionTitle}>
+            {t('profile.languageSettings')}
+          </Text>
 
           <View style={userProfileDetailStyles.languageContainer}>
             <View style={userProfileDetailStyles.languageColumn}>
@@ -233,15 +230,21 @@ const UserProfileDetail: React.FC<UserProfileDetailProps> = ({
           </Text>
 
           <TouchableOpacity style={userProfileDetailStyles.menuItem}>
-            <Text style={userProfileDetailStyles.menuText}>{t('profile.myGroupsHistory')}</Text>
+            <Text style={userProfileDetailStyles.menuText}>
+              {t('profile.myGroupsHistory')}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={userProfileDetailStyles.menuItem}>
-            <Text style={userProfileDetailStyles.menuText}>{t('profile.myParticipatingGroups')}</Text>
+            <Text style={userProfileDetailStyles.menuText}>
+              {t('profile.myParticipatingGroups')}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={userProfileDetailStyles.menuItem}>
-            <Text style={userProfileDetailStyles.menuText}>{t('profile.myLikes')}</Text>
+            <Text style={userProfileDetailStyles.menuText}>
+              {t('profile.myLikes')}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -252,7 +255,9 @@ const UserProfileDetail: React.FC<UserProfileDetailProps> = ({
                 userNickname: userProfile.nickName,
               })
             }>
-            <Text style={userProfileDetailStyles.menuText}>{t('profile.myGuestbook')}</Text>
+            <Text style={userProfileDetailStyles.menuText}>
+              {t('profile.myGuestbook')}
+            </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

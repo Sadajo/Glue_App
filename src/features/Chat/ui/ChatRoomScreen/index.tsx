@@ -23,6 +23,7 @@ import {
   ChatRoomInfo,
   InvitationBubble,
 } from '../../components';
+
 import {
   useDmChatRoomDetail,
   useDmMessages,
@@ -447,10 +448,81 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({route, navigation}) => {
 
       // 메시지 내용이 초대장 형식인지 확인 ([INVITATION]으로 시작하는지)
       if (message.content && message.content.startsWith('[INVITATION]')) {
+        // [INVITATION] 접두사를 제거하고 JSON 부분 추출
+        const invitationDataStr = message.content.replace('[INVITATION]', '');
+
+        console.log('초대 메시지 처리 시작:', {
+          originalContent: message.content,
+          extractedData: invitationDataStr,
+        });
+
+        // 빈 문자열이거나 JSON 형식이 아닌 경우 처리
+        if (!invitationDataStr || invitationDataStr.trim() === '') {
+          console.warn('초대 메시지 데이터가 비어있습니다:', message.content);
+          return (
+            <ChatMessage
+              id={message.dmMessageId?.toString() || ''}
+              text="초대 메시지 (데이터 없음)"
+              timestamp={
+                message.createdAt
+                  ? formatSimpleKSTTime(message.createdAt)
+                  : '시간 미상'
+              }
+              isMine={messageSenderId === currentUserId}
+              sender={{
+                id: user?.userId?.toString() || 'unknown',
+                name:
+                  user.userName ||
+                  t('common.unknownUser', {defaultValue: '알 수 없는 사용자'}),
+                profileImage:
+                  user.profileImageUrl && user.profileImageUrl.trim() !== ''
+                    ? user.profileImageUrl
+                    : '',
+                isHost: user.isHost || false,
+              }}
+            />
+          );
+        }
+
+        // JSON 형식인지 확인 (간단한 검사)
+        const trimmedData = invitationDataStr.trim();
+        if (!trimmedData.startsWith('{') || !trimmedData.endsWith('}')) {
+          console.warn('초대 메시지가 JSON 형식이 아닙니다:', trimmedData);
+          return (
+            <ChatMessage
+              id={message.dmMessageId?.toString() || ''}
+              text={`초대 메시지: ${trimmedData}`}
+              timestamp={
+                message.createdAt
+                  ? formatSimpleKSTTime(message.createdAt)
+                  : '시간 미상'
+              }
+              isMine={messageSenderId === currentUserId}
+              sender={{
+                id: user?.userId?.toString() || 'unknown',
+                name:
+                  user.userName ||
+                  t('common.unknownUser', {defaultValue: '알 수 없는 사용자'}),
+                profileImage:
+                  user.profileImageUrl && user.profileImageUrl.trim() !== ''
+                    ? user.profileImageUrl
+                    : '',
+                isHost: user.isHost || false,
+              }}
+            />
+          );
+        }
+
+        // JSON 파싱 시도
         try {
-          // [INVITATION] 접두사를 제거하고 JSON 파싱
-          const invitationDataStr = message.content.replace('[INVITATION]', '');
-          const invitationData = JSON.parse(invitationDataStr);
+          const invitationData = JSON.parse(trimmedData);
+
+          // 파싱된 데이터 검증
+          if (!invitationData || typeof invitationData !== 'object') {
+            throw new Error('파싱된 데이터가 올바르지 않습니다');
+          }
+
+          console.log('초대 메시지 파싱 성공:', invitationData);
 
           return (
             <InvitationBubble
@@ -468,9 +540,34 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({route, navigation}) => {
               }}
             />
           );
-        } catch (error) {
-          console.error('초대 메시지 파싱 오류:', error);
+        } catch (parseError) {
+          console.error('JSON 파싱 실패:', parseError);
+          console.error('파싱 시도한 문자열:', trimmedData);
+
           // 파싱 실패 시 일반 메시지로 표시
+          return (
+            <ChatMessage
+              id={message.dmMessageId?.toString() || ''}
+              text={`초대 메시지 (파싱 오류): ${trimmedData}`}
+              timestamp={
+                message.createdAt
+                  ? formatSimpleKSTTime(message.createdAt)
+                  : '시간 미상'
+              }
+              isMine={messageSenderId === currentUserId}
+              sender={{
+                id: user?.userId?.toString() || 'unknown',
+                name:
+                  user.userName ||
+                  t('common.unknownUser', {defaultValue: '알 수 없는 사용자'}),
+                profileImage:
+                  user.profileImageUrl && user.profileImageUrl.trim() !== ''
+                    ? user.profileImageUrl
+                    : '',
+                isHost: user.isHost || false,
+              }}
+            />
+          );
         }
       }
 
