@@ -6,12 +6,16 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
+  TouchableOpacity,
 } from 'react-native';
 import {useTranslation} from 'react-i18next';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {Text} from '../../../shared/ui/typography/Text';
 import {PopularPost} from '../api/carouselApi';
 import MeetingCard from './components/MeetingCard';
+import {ChevronLeft, Bell} from '../../../shared/assets/images';
+import FireIcon from '../../../shared/assets/images/fire-icon.svg';
+import LanguageIcon from '../../../shared/assets/images/language.svg';
 
 interface RouteParams {
   title: string;
@@ -32,8 +36,57 @@ interface TransformedMeetingCard {
   memberCount: string;
 }
 
+// 커스텀 헤더 컴포넌트
+const CustomHeader: React.FC<{title: string}> = ({title}) => {
+  const navigation = useNavigation<any>();
+
+  const handleBackPress = () => {
+    navigation.goBack();
+  };
+
+  const handleBellPress = () => {
+    navigation.navigate('NotificationsScreen');
+  };
+
+  // 제목에 따라 아이콘 결정
+  const getIcon = () => {
+    if (title.includes('인기') || title.includes('popular')) {
+      return <FireIcon width={24} height={24} />;
+    } else {
+      return <LanguageIcon width={24} height={24} />;
+    }
+  };
+
+  return (
+    <SafeAreaView style={headerStyles.safeArea}>
+      <View style={headerStyles.container}>
+        {/* 뒤로가기 버튼 */}
+        <TouchableOpacity
+          onPress={handleBackPress}
+          style={headerStyles.backButton}
+          hitSlop={{top: 20, right: 20, bottom: 20, left: 20}}>
+          <ChevronLeft width={24} height={24} color="#1CBFDC" />
+        </TouchableOpacity>
+
+        {/* 타이틀 */}
+        <View style={headerStyles.titleContainer}>
+          {getIcon()}
+          <Text style={headerStyles.title}>{title}</Text>
+        </View>
+
+        {/* 알림 버튼 */}
+        <TouchableOpacity
+          onPress={handleBellPress}
+          style={headerStyles.bellButton}
+          hitSlop={{top: 20, right: 20, bottom: 20, left: 20}}>
+          <Bell width={24} height={24} />
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
+  );
+};
+
 const PopularPostsList: React.FC = () => {
-  const navigation = useNavigation();
   const route = useRoute();
   const {t} = useTranslation();
   const {title, apiFunction} = route.params as RouteParams;
@@ -167,16 +220,9 @@ const PopularPostsList: React.FC = () => {
     );
   }, []);
 
-  // 헤더 설정
-  useEffect(() => {
-    navigation.setOptions({
-      title: title,
-      headerShown: true,
-    });
-  }, [navigation, title]);
-
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
+      <CustomHeader title={title} />
       {isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#1CBFDC" />
@@ -208,9 +254,50 @@ const PopularPostsList: React.FC = () => {
           contentContainerStyle={styles.listContainer}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 };
+
+// 헤더 스타일
+const headerStyles = StyleSheet.create({
+  safeArea: {
+    backgroundColor: '#FFFFFF',
+  },
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 13,
+    paddingHorizontal: 19,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  titleContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1C1C1E',
+  },
+  bellButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+});
 
 const styles = StyleSheet.create({
   container: {

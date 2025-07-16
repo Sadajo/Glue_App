@@ -435,8 +435,7 @@ export const AppNavigator = () => {
         name="PopularPostsList"
         component={PopularPostsList}
         options={{
-          headerShown: true,
-          title: '인기 게시글',
+          headerShown: false,
         }}
       />
     </RootStack.Navigator>
