@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import {StyleSheet, TouchableOpacity, View} from 'react-native';
 import {useTranslation} from 'react-i18next';
 import {CategorySectionProps} from '../../model/types';
@@ -12,8 +12,6 @@ interface TransformedMeetingCard {
   categoryColor: string;
   categoryBgColor: string;
   date: string;
-  author: string;
-  authorImage: string;
   viewCount: string;
   title: string;
   description: string;
@@ -26,30 +24,80 @@ const CategorySection = ({title}: Omit<CategorySectionProps, 'cards'>) => {
   const [cards, setCards] = useState<TransformedMeetingCard[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // 카테고리 ID에서 배경색으로 변환
+  const getCategoryColorFromId = useCallback((categoryId: number): string => {
+    switch (categoryId) {
+      case 1: // 공부
+        return '#DEE9FC';
+      case 2: // 친목
+        return '#E1FBE8';
+      case 3: // 도움
+        return '#FFF1BB';
+      default:
+        return '#384050';
+    }
+  }, []);
+
+  // 카테고리 ID에서 텍스트 색상으로 변환
+  const getCategoryTextColorFromId = useCallback(
+    (categoryId: number): string => {
+      switch (categoryId) {
+        case 1: // 공부
+          return '#263FA9';
+        case 2: // 친목
+          return '#306339';
+        case 3: // 도움
+          return '#A47C5E';
+        default:
+          return '#384050';
+      }
+    },
+    [],
+  );
+
+  // 카테고리 ID에서 텍스트로 변환
+  const getCategoryTextFromId = useCallback(
+    (categoryId: number): string => {
+      switch (categoryId) {
+        case 1:
+          return t('group.categories.study');
+        case 2:
+          return t('group.categories.social');
+        case 3:
+          return t('group.categories.help');
+        default:
+          return '';
+      }
+    },
+    [t],
+  );
+
   // API에서 받은 데이터를 MeetingCard props 형태로 변환
-  const transformPostToCard = (post: PopularPost): TransformedMeetingCard => {
-    return {
-      category: post.category,
-      categoryColor: post.categoryColor,
-      categoryBgColor: post.categoryBgColor,
-      date: new Date(post.meetingDate).toLocaleDateString(),
-      author: post.authorNickname,
-      authorImage: post.authorProfileImageUrl,
-      viewCount: post.viewCount.toString(),
-      title: post.title,
-      description: post.content,
-      likeCount: post.likeCount.toString(),
-      memberCount: `${post.currentParticipants}/${post.maxParticipants}`,
-    };
-  };
+  const transformPostToCard = useCallback(
+    (post: PopularPost): TransformedMeetingCard => {
+      return {
+        category: getCategoryTextFromId(post.categoryId),
+        categoryColor: getCategoryTextColorFromId(post.categoryId),
+        categoryBgColor: getCategoryColorFromId(post.categoryId),
+        date: new Date(post.createdAt).toLocaleDateString(),
+        viewCount: '0', // 기본값 설정 (API 응답에 없음)
+        title: post.title,
+        description: post.content,
+        likeCount: post.likeCount.toString(),
+        memberCount: `${post.currentParticipants}/${post.maxParticipants}`,
+      };
+    },
+    [getCategoryTextFromId, getCategoryTextColorFromId, getCategoryColorFromId],
+  );
 
   useEffect(() => {
     const fetchPopularPosts = async () => {
       try {
         setIsLoading(true);
         const response = await getPopularPosts(2); // 2개만 가져오기
-        if (response.success && response.data?.posts) {
-          const transformedCards = response.data.posts.map(transformPostToCard);
+        if (response.success && response.data) {
+          const transformedCards = response.data.map(transformPostToCard);
+          console.log('transformedCards', transformedCards);
           setCards(transformedCards);
         }
       } catch (error) {
@@ -60,7 +108,7 @@ const CategorySection = ({title}: Omit<CategorySectionProps, 'cards'>) => {
     };
 
     fetchPopularPosts();
-  }, []);
+  }, [transformPostToCard]);
 
   return (
     <>

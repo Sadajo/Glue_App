@@ -4,8 +4,6 @@ export interface MeetingCardProps {
   categoryColor: string;
   categoryBgColor: string;
   date: string;
-  author: string;
-  authorImage: string;
   viewCount: string;
   title: string;
   description: string;

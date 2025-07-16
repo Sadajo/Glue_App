@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, Image, StyleSheet, TouchableOpacity} from 'react-native';
+import {View, StyleSheet, TouchableOpacity} from 'react-native';
 import {MeetingCardProps} from '../../model/types';
 import {Text} from '../../../../shared/ui/typography/Text';
 import {Eye, Heart, Users} from '@shared/assets/images';
@@ -9,8 +9,6 @@ const MeetingCard = ({
   categoryColor,
   categoryBgColor,
   date,
-  author,
-  authorImage,
   viewCount,
   title,
   description,
@@ -46,29 +44,6 @@ const MeetingCard = ({
           {date}
         </Text>
       </View>
-      <View style={styles.authorRow}>
-        <View style={styles.authorInfo}>
-          <Image
-            source={{uri: authorImage}}
-            resizeMode={'stretch'}
-            style={styles.authorImage}
-          />
-          <Text
-            variant="caption"
-            color="#384050"
-            weight="bold"
-            style={styles.authorName}>
-            {author}
-          </Text>
-        </View>
-        <View style={styles.flex1}></View>
-        <View style={styles.viewCountContainer}>
-          <Eye style={styles.smallIcon} />
-          <Text variant="caption" color="#9DA2AF" style={styles.metaText}>
-            {viewCount}
-          </Text>
-        </View>
-      </View>
       <View style={styles.cardContent}>
         <View style={styles.cardTextContainer}>
           <Text
@@ -83,6 +58,12 @@ const MeetingCard = ({
           </Text>
         </View>
         <View style={styles.cardFooter}>
+          <View style={styles.footerItem}>
+            <Eye style={styles.smallIcon} />
+            <Text variant="caption" color="#384050" style={styles.metaInfoText}>
+              {viewCount}
+            </Text>
+          </View>
           <View style={styles.footerItem}>
             <Heart style={styles.smallIcon} />
             <Text variant="caption" color="#384050" style={styles.metaInfoText}>
@@ -135,38 +116,10 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: 12,
   },
-  authorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-    width: '100%',
-  },
-  authorInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  authorImage: {
-    width: 24,
-    height: 24,
-    marginRight: 6,
-    borderRadius: 100,
-    borderWidth: 1,
-    borderColor: '#D3D5DB',
-  },
-  authorName: {
-    fontSize: 12,
-  },
-  viewCountContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   smallIcon: {
     width: 14,
     height: 14,
     marginRight: 4,
-  },
-  metaText: {
-    fontSize: 12,
   },
   cardContent: {
     alignItems: 'flex-start',

@@ -20,22 +20,14 @@ export interface CarouselResponse {
 // 인기 게시글 응답 타입
 export interface PopularPost {
   postId: number;
+  categoryId: number;
+  createdAt: string;
   title: string;
   content: string;
-  createdAt: string;
-  updatedAt: string;
-  meetingDate: string;
-  meetingLocation: string;
-  authorNickname: string;
-  authorProfileImageUrl: string;
-  viewCount: number;
   likeCount: number;
-  commentCount: number;
-  category: string;
-  categoryColor: string;
-  categoryBgColor: string;
-  maxParticipants: number;
+  isLiked: number;
   currentParticipants: number;
+  maxParticipants: number;
 }
 
 export interface PopularPostsResponse {
