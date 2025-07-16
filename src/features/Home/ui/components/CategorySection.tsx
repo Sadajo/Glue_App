@@ -8,6 +8,7 @@ import {Text} from '../../../../shared/ui/typography/Text';
 import {PopularPost} from '../../api/carouselApi';
 
 interface TransformedMeetingCard {
+  postId: number;
   category: string;
   categoryColor: string;
   categoryBgColor: string;
@@ -99,6 +100,7 @@ const CategorySection = ({
   const transformPostToCard = useCallback(
     (post: PopularPost): TransformedMeetingCard => {
       return {
+        postId: post.postId,
         category: getCategoryTextFromId(post.categoryId),
         categoryColor: getCategoryTextColorFromId(post.categoryId),
         categoryBgColor: getCategoryColorFromId(post.categoryId),

@@ -39,7 +39,7 @@ export interface PopularPostsResponse {
  */
 export const getMainCarousel = async (version?: string) => {
   const endpoint = '/api/main/carousel';
-  const params = version ? {version} : {};
+  const params = version ? {version} : {version: 9};
 
   try {
     // JWT 토큰 가져오기

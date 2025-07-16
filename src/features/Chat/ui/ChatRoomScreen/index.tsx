@@ -13,6 +13,7 @@ import {
   Text as RNText,
 } from 'react-native';
 import {useQueryClient} from '@tanstack/react-query';
+import {useFocusEffect} from '@react-navigation/native';
 import {styles} from './styles';
 import {
   ChatHeader,
@@ -35,6 +36,11 @@ import {dummyProfile} from '@shared/assets/images';
 import {secureStorage} from '@shared/lib/security';
 import {webSocketService} from '../../lib/websocket';
 import {useTranslation} from 'react-i18next';
+import {
+  formatSimpleKSTTime,
+  formatKSTDate,
+  convertUTCToKST,
+} from '../../lib/timeUtils';
 
 interface ChatRoomScreenProps {
   route?: {
@@ -98,6 +104,19 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({route, navigation}) => {
     }
   }, [isDetailError, detailError, isMessagesError, messagesError]);
 
+  // 화면 포커스 시 메시지 읽음 처리
+  useFocusEffect(
+    useCallback(() => {
+      const markMessagesAsRead = async () => {
+        if (dmChatRoomId && currentUserId && webSocketService.isConnected()) {
+          webSocketService.sendDmReadMessage(dmChatRoomId, currentUserId);
+        }
+      };
+
+      markMessagesAsRead();
+    }, [dmChatRoomId, currentUserId]),
+  );
+
   // 무한 스크롤 메시지 데이터를 평면 배열로 변환 (React Query 캐시에서 직접 사용)
   const messages = useMemo(() => {
     if (!messagesData?.pages) return [];
@@ -112,10 +131,11 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({route, navigation}) => {
     );
 
     // 시간순으로 정렬 후 역순으로 배치 (inverted FlatList용)
-    return uniqueMessages.sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-    );
+    return uniqueMessages.sort((a, b) => {
+      const timeA = convertUTCToKST(a.createdAt)?.getTime() || 0;
+      const timeB = convertUTCToKST(b.createdAt)?.getTime() || 0;
+      return timeB - timeA;
+    });
   }, [messagesData]);
 
   // WebSocket 메시지 리스너 설정 - React Query 캐시에 직접 추가
@@ -293,7 +313,10 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({route, navigation}) => {
       console.log('✅ 알림 토글 성공');
     } catch (error: any) {
       console.error('❌ 알림 토글 실패:', error);
-      toastService.error('오류', error.message || '알림 설정 변경에 실패했습니다.');
+      toastService.error(
+        '오류',
+        error.message || '알림 설정 변경에 실패했습니다.',
+      );
     }
   };
 
@@ -458,11 +481,7 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({route, navigation}) => {
           text={message.content || ''}
           timestamp={
             message.createdAt
-              ? new Date(message.createdAt).toLocaleTimeString('ko-KR', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  hour12: true,
-                })
+              ? formatSimpleKSTTime(message.createdAt)
               : '시간 미상'
           }
           isMine={messageSenderId === currentUserId}
@@ -533,16 +552,15 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({route, navigation}) => {
   );
   const chatRoomName = otherUser?.user?.userNickname || '알 수 없는 사용자';
 
-  // 날짜 계산 (메시지가 있으면 첫 번째 메시지 날짜, 없으면 오늘 날짜)
+  // 날짜 계산 (메시지가 있으면 첫 번째 메시지 날짜, 없으면 오늘 날짜) - KST 기준
   const getDisplayDate = () => {
     if (messages && messages.length > 0 && messages[0]?.createdAt) {
-      return new Date(messages[0].createdAt).toLocaleDateString('ko-KR', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      });
+      return formatKSTDate(messages[0].createdAt);
     }
-    return new Date().toLocaleDateString('ko-KR', {
+    // 현재 시간을 KST로 변환하여 포맷팅
+    const now = new Date();
+    const kstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+    return kstNow.toLocaleDateString('ko-KR', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',

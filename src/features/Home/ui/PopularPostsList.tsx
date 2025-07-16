@@ -25,6 +25,7 @@ interface RouteParams {
 }
 
 interface TransformedMeetingCard {
+  postId: number;
   category: string;
   categoryColor: string;
   categoryBgColor: string;
@@ -147,6 +148,7 @@ const PopularPostsList: React.FC = () => {
   const transformPostToCard = useCallback(
     (post: PopularPost): TransformedMeetingCard => {
       return {
+        postId: post.postId,
         category: getCategoryTextFromId(post.categoryId),
         categoryColor: getCategoryTextColorFromId(post.categoryId),
         categoryBgColor: getCategoryColorFromId(post.categoryId),

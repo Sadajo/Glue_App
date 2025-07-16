@@ -1,6 +1,7 @@
 import {useEffect} from 'react';
 import {webSocketService} from '../../../lib/websocket';
 import {DmMessageResponse} from '../../../api/api';
+import {convertUTCToKST} from '../../../lib/timeUtils';
 
 export const useWebSocket = (
   dmChatRoomId: number | undefined,
@@ -29,12 +30,13 @@ export const useWebSocket = (
             return prev;
           }
 
-          // 새 메시지 추가 후 시간순으로 정렬 (최신순)
+          // 새 메시지 추가 후 시간순으로 정렬 (최신순, KST 기준)
           const newMessages = [dmMessage, ...prev];
-          return newMessages.sort(
-            (a, b) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-          );
+          return newMessages.sort((a, b) => {
+            const timeA = convertUTCToKST(a.createdAt)?.getTime() || 0;
+            const timeB = convertUTCToKST(b.createdAt)?.getTime() || 0;
+            return timeB - timeA;
+          });
         });
       }
     });

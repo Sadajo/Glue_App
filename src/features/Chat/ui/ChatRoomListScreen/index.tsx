@@ -23,6 +23,8 @@ import {
 import {DmChatRoom, GroupChatRoom} from '../../api/api';
 import {toastService} from '@shared/lib/notifications/toast';
 import {secureStorage} from '@shared/lib/security';
+import {webSocketService, ChatRoomListUpdateDto} from '../../lib/websocket';
+import {formatKSTTime, convertUTCToKST} from '../../lib/timeUtils';
 
 interface ChatRoomListScreenProps {
   chatRooms: ChatRoom[]; // 이제 사용하지 않지만 하위 호환성을 위해 유지
@@ -84,20 +86,145 @@ const ChatRoomListScreen: React.FC<ChatRoomListScreenProps> = ({
   // 새로고침 상태
   const [refreshing, setRefreshing] = useState(false);
 
-  // 현재 사용자 ID 초기화
+  // 채팅방 리스트 업데이트 핸들러
+  const handleChatRoomListUpdate = useCallback(
+    (update: ChatRoomListUpdateDto) => {
+      console.log('[ChatRoomListScreen] 채팅방 리스트 업데이트 수신:', update);
+
+      if (update.chatRoomType === 'DM') {
+        // DM 채팅방 업데이트
+        setDirectMessages(prevMessages => {
+          const updatedMessages = [...prevMessages];
+          const existingIndex = updatedMessages.findIndex(
+            room => room.dmChatRoomId === update.chatRoomId,
+          );
+
+          if (existingIndex !== -1) {
+            // 기존 항목 업데이트
+            updatedMessages[existingIndex] = {
+              ...updatedMessages[existingIndex],
+              lastMessage: update.lastMessage,
+              lastMessageTime: update.lastMessageTime,
+              hasUnreadMessages: update.hasUnreadMessages,
+            };
+          } else if (update.otherUser) {
+            // 새로운 DM 채팅방 추가
+            const newRoom: DmChatRoom = {
+              dmChatRoomId: update.chatRoomId,
+              meetingId: 0, // 기본값
+              otherUser: {
+                userId: update.otherUser.userId,
+                userName: update.otherUser.nickname,
+                profileImageUrl: update.otherUser.profileImageUrl,
+              },
+              lastMessage: update.lastMessage,
+              lastMessageTime: update.lastMessageTime,
+              hasUnreadMessages: update.hasUnreadMessages,
+            };
+            updatedMessages.unshift(newRoom);
+          }
+
+          // 최신 메시지 시간 기준으로 정렬 (KST 기준)
+          return updatedMessages.sort((a, b) => {
+            const timeA = a.lastMessageTime
+              ? convertUTCToKST(a.lastMessageTime)?.getTime() || 0
+              : 0;
+            const timeB = b.lastMessageTime
+              ? convertUTCToKST(b.lastMessageTime)?.getTime() || 0
+              : 0;
+            return timeB - timeA;
+          });
+        });
+      } else if (update.chatRoomType === 'GROUP') {
+        // 그룹 채팅방 업데이트
+        setGroupChatRooms(prevRooms => {
+          const updatedRooms = [...prevRooms];
+          const existingIndex = updatedRooms.findIndex(
+            room => room.groupChatroomId === update.chatRoomId,
+          );
+
+          if (existingIndex !== -1) {
+            // 기존 항목 업데이트
+            updatedRooms[existingIndex] = {
+              ...updatedRooms[existingIndex],
+              lastMessage: update.lastMessage,
+              lastMessageTime: update.lastMessageTime,
+              hasUnreadMessages: update.hasUnreadMessages,
+            };
+          } else if (update.meeting) {
+            // 새로운 그룹 채팅방 추가
+            const newRoom: GroupChatRoom = {
+              groupChatroomId: update.chatRoomId,
+              meeting: {
+                meetingId: update.meeting.meetingId,
+                meetingTitle: update.meeting.meetingTitle,
+                meetingImageUrl: update.meeting.meetingImageUrl,
+                currentParticipants: update.meeting.currentParticipants,
+              },
+              lastMessage: update.lastMessage,
+              lastMessageTime: update.lastMessageTime,
+              hasUnreadMessages: update.hasUnreadMessages,
+            };
+            updatedRooms.unshift(newRoom);
+          }
+
+          // 최신 메시지 시간 기준으로 정렬 (KST 기준)
+          return updatedRooms.sort((a, b) => {
+            const timeA = a.lastMessageTime
+              ? convertUTCToKST(a.lastMessageTime)?.getTime() || 0
+              : 0;
+            const timeB = b.lastMessageTime
+              ? convertUTCToKST(b.lastMessageTime)?.getTime() || 0
+              : 0;
+            return timeB - timeA;
+          });
+        });
+      }
+    },
+    [],
+  );
+
+  // 현재 사용자 ID 초기화 및 WebSocket 연결
   useEffect(() => {
     const initCurrentUser = async () => {
       try {
         const userId = await secureStorage.getUserId();
         setCurrentUserId(userId);
         console.log('[ChatRoomListScreen] 현재 사용자 ID:', userId);
+
+        // WebSocket 연결
+        if (userId && !webSocketService.isConnected()) {
+          const connected = await webSocketService.connectWebSocket(userId);
+          if (connected) {
+            console.log('[ChatRoomListScreen] WebSocket 연결 성공');
+            // 채팅방 리스트 업데이트 리스너 등록
+            webSocketService.setChatRoomListUpdateListener(
+              handleChatRoomListUpdate,
+            );
+          } else {
+            console.error('[ChatRoomListScreen] WebSocket 연결 실패');
+          }
+        } else if (webSocketService.isConnected()) {
+          // 이미 연결된 경우 리스너만 등록
+          webSocketService.setChatRoomListUpdateListener(
+            handleChatRoomListUpdate,
+          );
+        }
       } catch (error) {
-        console.error('[ChatRoomListScreen] 현재 사용자 ID 가져오기 실패:', error);
+        console.error(
+          '[ChatRoomListScreen] 현재 사용자 ID 가져오기 실패:',
+          error,
+        );
       }
     };
 
     initCurrentUser();
-  }, []);
+
+    // 컴포넌트 언마운트 시 리스너 해제
+    return () => {
+      webSocketService.setChatRoomListUpdateListener(null);
+    };
+  }, [handleChatRoomListUpdate]);
 
   // 새로고침 핸들러
   const onRefresh = useCallback(async () => {
@@ -184,16 +311,15 @@ const ChatRoomListScreen: React.FC<ChatRoomListScreenProps> = ({
         filteredMessages = uniqueRooms;
       }
 
-      // 최신 메시지 순으로 정렬
+      // 최신 메시지 순으로 정렬 (KST 기준)
       filteredMessages.sort((a, b) => {
         // lastMessageTime이 null인 경우 가장 아래로
         if (!a.lastMessageTime) return 1;
         if (!b.lastMessageTime) return -1;
 
-        return (
-          new Date(b.lastMessageTime).getTime() -
-          new Date(a.lastMessageTime).getTime()
-        );
+        const timeA = convertUTCToKST(a.lastMessageTime)?.getTime() || 0;
+        const timeB = convertUTCToKST(b.lastMessageTime)?.getTime() || 0;
+        return timeB - timeA;
       });
 
       setDirectMessages(filteredMessages);
@@ -203,16 +329,15 @@ const ChatRoomListScreen: React.FC<ChatRoomListScreenProps> = ({
   // 그룹 채팅방 데이터 업데이트
   useEffect(() => {
     if (activeTab === 'chat' && groupChatRoomsData?.data) {
-      // 최신 메시지 순으로 정렬
+      // 최신 메시지 순으로 정렬 (KST 기준)
       const sortedGroupChats = [...groupChatRoomsData.data].sort((a, b) => {
         // lastMessageTime이 null인 경우 가장 아래로
         if (!a.lastMessageTime) return 1;
         if (!b.lastMessageTime) return -1;
 
-        return (
-          new Date(b.lastMessageTime).getTime() -
-          new Date(a.lastMessageTime).getTime()
-        );
+        const timeA = convertUTCToKST(a.lastMessageTime)?.getTime() || 0;
+        const timeB = convertUTCToKST(b.lastMessageTime)?.getTime() || 0;
+        return timeB - timeA;
       });
 
       setGroupChatRooms(sortedGroupChats);
@@ -232,6 +357,12 @@ const ChatRoomListScreen: React.FC<ChatRoomListScreenProps> = ({
   // DM 채팅방 클릭 핸들러
   const handleDmChatRoomPress = (dmRoomId: number) => {
     console.log('[ChatRoomList] DM 채팅방 클릭됨:', dmRoomId);
+
+    // 메시지 읽음 처리
+    if (currentUserId && webSocketService.isConnected()) {
+      webSocketService.sendDmReadMessage(dmRoomId, currentUserId);
+    }
+
     if (onDmChatRoomPress) {
       onDmChatRoomPress(dmRoomId);
     } else {
@@ -242,6 +373,11 @@ const ChatRoomListScreen: React.FC<ChatRoomListScreenProps> = ({
   // 그룹 채팅방 클릭 핸들러
   const handleGroupChatRoomPress = (groupChatroomId: number) => {
     console.log('[ChatRoomList] 그룹 채팅방 클릭됨:', groupChatroomId);
+
+    // 메시지 읽음 처리
+    if (currentUserId && webSocketService.isConnected()) {
+      webSocketService.sendGroupReadMessage(groupChatroomId, currentUserId);
+    }
 
     // 해당 그룹 채팅방 정보 찾기
     const selectedRoom = groupChatRooms.find(
@@ -265,33 +401,8 @@ const ChatRoomListScreen: React.FC<ChatRoomListScreenProps> = ({
     }
   };
 
-  // 간단한 날짜 포맷팅 함수
-  const formatSafeTime = (dateString: string | null) => {
-    if (!dateString) return '';
-
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return '';
-
-      const now = new Date();
-      const isToday = now.toDateString() === date.toDateString();
-
-      if (isToday) {
-        return date.toLocaleTimeString('ko-KR', {
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: true,
-        });
-      } else {
-        return date.toLocaleDateString('ko-KR', {
-          month: 'numeric',
-          day: 'numeric',
-        });
-      }
-    } catch (error) {
-      return '';
-    }
-  };
+  // 기존 formatSafeTime 함수를 formatKSTTime으로 교체
+  // formatKSTTime은 timeUtils에서 import되어 사용됨
 
   // 초대장 메시지를 읽기 쉬운 형태로 변환하는 함수
   const formatLastMessage = (lastMessage: string | null) => {
@@ -344,7 +455,7 @@ const ChatRoomListScreen: React.FC<ChatRoomListScreenProps> = ({
       if (room.lastMessage?.startsWith('[INVITATION]')) {
         return room.hasUnreadMessages;
       }
-      
+
       // 다른 로직으로 판단하기 어려우므로 일단 API 응답 그대로 사용
       // TODO: API에서 lastMessageSenderId 제공 시 정확한 판단 가능
       return room.hasUnreadMessages;
@@ -388,9 +499,11 @@ const ChatRoomListScreen: React.FC<ChatRoomListScreenProps> = ({
         </View>
         <View style={styles.messageTimeContainer}>
           <Text style={styles.messageTime}>
-            {formatSafeTime(room.lastMessageTime)}
+            {formatKSTTime(room.lastMessageTime)}
           </Text>
-          {shouldShowUnreadIndicator(room) && <View style={styles.unreadIndicator} />}
+          {shouldShowUnreadIndicator(room) && (
+            <View style={styles.unreadIndicator} />
+          )}
         </View>
       </TouchableOpacity>
     );
@@ -428,9 +541,11 @@ const ChatRoomListScreen: React.FC<ChatRoomListScreenProps> = ({
         </View>
         <View style={styles.messageTimeContainer}>
           <Text style={styles.messageTime}>
-            {formatSafeTime(room.lastMessageTime)}
+            {formatKSTTime(room.lastMessageTime)}
           </Text>
-          {shouldShowUnreadIndicator(room) && <View style={styles.unreadIndicator} />}
+          {shouldShowUnreadIndicator(room) && (
+            <View style={styles.unreadIndicator} />
+          )}
         </View>
       </TouchableOpacity>
     );

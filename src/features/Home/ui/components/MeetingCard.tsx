@@ -5,6 +5,7 @@ import {Text} from '../../../../shared/ui/typography/Text';
 import {Eye, Heart, Users} from '@shared/assets/images';
 import {useNavigation} from '@react-navigation/native';
 const MeetingCard = ({
+  postId,
   category,
   categoryColor,
   categoryBgColor,
@@ -20,13 +21,8 @@ const MeetingCard = ({
     <TouchableOpacity
       style={styles.card}
       onPress={() =>
-        (navigation as any).navigate('Group', {
-          screen: 'GroupDetail',
-          params: {
-            // id: card.id,
-            // title: card.title,
-            // data: card,
-          },
+        (navigation as any).navigate('GroupDetail', {
+          postId: postId,
         })
       }>
       <View style={styles.cardHeader}>

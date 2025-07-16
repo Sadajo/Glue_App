@@ -5,6 +5,26 @@ import {config} from '@shared/config/env';
 import {DmMessageResponse, GroupMessageResponse} from '../api/api';
 import {secureStorage} from '@shared/lib/security';
 
+// 채팅방 리스트 업데이트 DTO 타입 정의
+export interface ChatRoomListUpdateDto {
+  chatRoomId: number;
+  chatRoomType: 'DM' | 'GROUP';
+  otherUser?: {
+    userId: number;
+    nickname: string;
+    profileImageUrl: string | null;
+  };
+  meeting?: {
+    meetingId: number;
+    meetingTitle: string;
+    meetingImageUrl: string;
+    currentParticipants: number;
+  };
+  lastMessage: string | null;
+  lastMessageTime: string | null;
+  hasUnreadMessages: boolean;
+}
+
 export type WebSocketStatus =
   | 'disconnected'
   | 'connecting'
@@ -17,6 +37,9 @@ class WebSocketService {
   private messageListener: ((message: DmMessageResponse) => void) | null = null;
   private groupMessageListener:
     | ((message: GroupMessageResponse) => void)
+    | null = null;
+  private chatRoomListUpdateListener:
+    | ((update: ChatRoomListUpdateDto) => void)
     | null = null;
   private statusChangeListener: ((status: WebSocketStatus) => void) | null =
     null;
@@ -85,6 +108,24 @@ class WebSocketService {
             this.messageListener?.(dmMessage);
           } catch (error) {
             console.error('[WebSocketService] 메시지 파싱 에러:', error);
+          }
+        });
+
+        // 채팅방 리스트 업데이트 구독
+        const chatRoomListUpdatePath = `/queue/chatroom-list-update`;
+        this.client?.subscribe(chatRoomListUpdatePath, (message: IMessage) => {
+          try {
+            const update: ChatRoomListUpdateDto = JSON.parse(message.body);
+            console.log(
+              '[WebSocketService] 채팅방 리스트 업데이트 수신:',
+              update,
+            );
+            this.chatRoomListUpdateListener?.(update);
+          } catch (error) {
+            console.error(
+              '[WebSocketService] 채팅방 리스트 업데이트 파싱 에러:',
+              error,
+            );
           }
         });
       };
@@ -224,6 +265,13 @@ class WebSocketService {
     this.groupMessageListener = listener;
   }
 
+  // 채팅방 리스트 업데이트 리스너 설정
+  setChatRoomListUpdateListener(
+    listener: ((update: ChatRoomListUpdateDto) => void) | null,
+  ): void {
+    this.chatRoomListUpdateListener = listener;
+  }
+
   // 그룹 채팅방 구독
   subscribeToGroupChatRoom(groupChatroomId: number): boolean {
     if (!this.client?.connected) {
@@ -302,6 +350,53 @@ class WebSocketService {
       }
     });
     this.groupChatRoomSubscriptions.clear();
+  }
+
+  // DM 메시지 읽음 처리
+  sendDmReadMessage(dmChatRoomId: number, receiverId: number): void {
+    if (!this.client?.connected) {
+      console.error('[WebSocketService] WebSocket이 연결되지 않음');
+      return;
+    }
+
+    try {
+      this.client.publish({
+        destination: `/app/dm/${dmChatRoomId}/read-message`,
+        body: JSON.stringify({
+          receiverId: receiverId,
+        }),
+      });
+      console.log(
+        `[WebSocketService] DM 메시지 읽음 처리 전송: ${dmChatRoomId}`,
+      );
+    } catch (error) {
+      console.error(`[WebSocketService] DM 메시지 읽음 처리 전송 실패:`, error);
+    }
+  }
+
+  // 그룹 메시지 읽음 처리
+  sendGroupReadMessage(groupChatRoomId: number, receiverId: number): void {
+    if (!this.client?.connected) {
+      console.error('[WebSocketService] WebSocket이 연결되지 않음');
+      return;
+    }
+
+    try {
+      this.client.publish({
+        destination: `/app/group/${groupChatRoomId}/read-message`,
+        body: JSON.stringify({
+          receiverId: receiverId,
+        }),
+      });
+      console.log(
+        `[WebSocketService] 그룹 메시지 읽음 처리 전송: ${groupChatRoomId}`,
+      );
+    } catch (error) {
+      console.error(
+        `[WebSocketService] 그룹 메시지 읽음 처리 전송 실패:`,
+        error,
+      );
+    }
   }
 
   // 상태 변경 리스너 설정

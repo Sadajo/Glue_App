@@ -1,5 +1,6 @@
 // 모임 카드 데이터 타입
 export interface MeetingCardProps {
+  postId: number;
   category: string;
   categoryColor: string;
   categoryBgColor: string;
