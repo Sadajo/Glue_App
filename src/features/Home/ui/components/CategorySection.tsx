@@ -4,8 +4,7 @@ import {useTranslation} from 'react-i18next';
 import {CategorySectionProps} from '../../model/types';
 import MeetingCard from './MeetingCard';
 import {Text} from '../../../../shared/ui/typography/Text';
-import FireIcon from '../../../../shared/assets/images/fire-icon.svg';
-import {getPopularPosts, PopularPost} from '../../api/carouselApi';
+import {PopularPost} from '../../api/carouselApi';
 
 interface TransformedMeetingCard {
   category: string;
@@ -19,7 +18,21 @@ interface TransformedMeetingCard {
   memberCount: string;
 }
 
-const CategorySection = ({title}: Omit<CategorySectionProps, 'cards'>) => {
+interface CategorySectionPropsWithApi
+  extends Omit<CategorySectionProps, 'cards'> {
+  apiFunction: (
+    size: number,
+  ) => Promise<{success: boolean; data: PopularPost[]}>;
+  icon: React.ReactNode;
+  backgroundColor?: string;
+}
+
+const CategorySection = ({
+  title,
+  apiFunction,
+  icon,
+  backgroundColor,
+}: CategorySectionPropsWithApi) => {
   const {t} = useTranslation();
   const [cards, setCards] = useState<TransformedMeetingCard[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -91,30 +104,38 @@ const CategorySection = ({title}: Omit<CategorySectionProps, 'cards'>) => {
   );
 
   useEffect(() => {
-    const fetchPopularPosts = async () => {
+    const fetchPosts = async () => {
       try {
         setIsLoading(true);
-        const response = await getPopularPosts(2); // 2개만 가져오기
+        const response = await apiFunction(2); // 2개만 가져오기
         if (response.success && response.data) {
           const transformedCards = response.data.map(transformPostToCard);
           console.log('transformedCards', transformedCards);
           setCards(transformedCards);
         }
       } catch (error) {
-        console.error('인기 게시글 로드 실패:', error);
+        console.error('게시글 로드 실패:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchPopularPosts();
-  }, [transformPostToCard]);
+    fetchPosts();
+  }, [apiFunction, transformPostToCard]);
 
   return (
-    <>
+    <View
+      style={[
+        styles.container,
+        backgroundColor && {
+          backgroundColor,
+          paddingVertical: 16,
+          minHeight: 200,
+        },
+      ]}>
       <View style={styles.titleContainer}>
         <View style={styles.titleIconContainer}>
-          <FireIcon width={24} height={24} />
+          {icon}
           <Text
             variant="subtitle1"
             weight="bold"
@@ -150,11 +171,14 @@ const CategorySection = ({title}: Omit<CategorySectionProps, 'cards'>) => {
           </View>
         )}
       </View>
-    </>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    width: '100%',
+  },
   titleContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',

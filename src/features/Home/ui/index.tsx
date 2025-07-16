@@ -5,7 +5,9 @@ import {useFocusEffect} from '@react-navigation/native';
 import Header from './components/Header';
 import BannerSection from './components/BannerSection';
 import CategorySection from './components/CategorySection';
-import CategorySection2 from './components/CategorySection2';
+import {getPopularPosts, getLanguageMatchPosts} from '../api/carouselApi';
+import FireIcon from '../../../shared/assets/images/fire-icon.svg';
+import LanguageIcon from '../../../shared/assets/images/language.svg';
 
 const HomeScreen = () => {
   const {t} = useTranslation();
@@ -34,8 +36,17 @@ const HomeScreen = () => {
       <Header />
       <ScrollView style={styles.scrollContainer}>
         <BannerSection />
-        <CategorySection title={t('home.popular')} />
-        <CategorySection2 title={t('home.languageExchange')} />
+        <CategorySection
+          title={t('home.popular')}
+          apiFunction={getPopularPosts}
+          icon={<FireIcon width={24} height={24} />}
+        />
+        <CategorySection
+          title={t('home.languageExchange')}
+          apiFunction={getLanguageMatchPosts}
+          icon={<LanguageIcon width={24} height={24} />}
+          backgroundColor="#F9FAFB"
+        />
       </ScrollView>
     </SafeAreaView>
   );
