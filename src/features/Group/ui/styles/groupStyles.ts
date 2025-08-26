@@ -5,7 +5,6 @@ export const commonStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 20,
   },
   headerRow: {
     flexDirection: 'row',
@@ -25,7 +24,7 @@ export const commonStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    paddingVertical: 18.5,
+    paddingVertical: 16.5,
     paddingHorizontal: 19,
   },
   subHeaderTitle: {
@@ -76,6 +75,7 @@ export const groupListStyles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 4,
     marginHorizontal: 4,
+    width: '100%',
   },
   categoryBadge: {
     borderRadius: 2,
@@ -90,6 +90,7 @@ export const groupListStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingRight: 2,
+    marginLeft: 'auto',
   },
   likeIcon: {
     width: 15,
@@ -148,6 +149,7 @@ export const groupListStyles = StyleSheet.create({
   itemImage: {
     width: 72,
     height: 72,
+    borderRadius: 8,
   },
 });
 

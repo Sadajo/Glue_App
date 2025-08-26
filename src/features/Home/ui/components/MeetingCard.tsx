@@ -1,16 +1,15 @@
 import React from 'react';
-import {View, Image, StyleSheet, TouchableOpacity} from 'react-native';
+import {View, StyleSheet, TouchableOpacity} from 'react-native';
 import {MeetingCardProps} from '../../model/types';
 import {Text} from '../../../../shared/ui/typography/Text';
 import {Eye, Heart, Users} from '@shared/assets/images';
 import {useNavigation} from '@react-navigation/native';
 const MeetingCard = ({
+  postId,
   category,
   categoryColor,
   categoryBgColor,
   date,
-  author,
-  authorImage,
   viewCount,
   title,
   description,
@@ -22,13 +21,8 @@ const MeetingCard = ({
     <TouchableOpacity
       style={styles.card}
       onPress={() =>
-        navigation.navigate('Group', {
-          screen: 'GroupDetail',
-          params: {
-            // id: card.id,
-            // title: card.title,
-            // data: card,
-          },
+        (navigation as any).navigate('GroupDetail', {
+          postId: postId,
         })
       }>
       <View style={styles.cardHeader}>
@@ -46,29 +40,6 @@ const MeetingCard = ({
           {date}
         </Text>
       </View>
-      <View style={styles.authorRow}>
-        <View style={styles.authorInfo}>
-          <Image
-            source={{uri: authorImage}}
-            resizeMode={'stretch'}
-            style={styles.authorImage}
-          />
-          <Text
-            variant="caption"
-            color="#384050"
-            weight="bold"
-            style={styles.authorName}>
-            {author}
-          </Text>
-        </View>
-        <View style={styles.flex1}></View>
-        <View style={styles.viewCountContainer}>
-          <Eye style={styles.smallIcon} />
-          <Text variant="caption" color="#9DA2AF" style={styles.metaText}>
-            {viewCount}
-          </Text>
-        </View>
-      </View>
       <View style={styles.cardContent}>
         <View style={styles.cardTextContainer}>
           <Text
@@ -83,6 +54,12 @@ const MeetingCard = ({
           </Text>
         </View>
         <View style={styles.cardFooter}>
+          <View style={styles.footerItem}>
+            <Eye style={styles.smallIcon} />
+            <Text variant="caption" color="#384050" style={styles.metaInfoText}>
+              {viewCount}
+            </Text>
+          </View>
           <View style={styles.footerItem}>
             <Heart style={styles.smallIcon} />
             <Text variant="caption" color="#384050" style={styles.metaInfoText}>
@@ -109,7 +86,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingVertical: 12,
     paddingHorizontal: 14,
-    marginRight: 8,
     shadowColor: '#0000000D',
     shadowOpacity: 0.1,
     shadowOffset: {
@@ -118,7 +94,7 @@ const styles = StyleSheet.create({
     },
     shadowRadius: 4,
     elevation: 4,
-    width: 280,
+    width: '100%',
   },
   cardHeader: {
     flexDirection: 'row',
@@ -136,38 +112,10 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: 12,
   },
-  authorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-    width: '100%',
-  },
-  authorInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  authorImage: {
-    width: 24,
-    height: 24,
-    marginRight: 6,
-    borderRadius: 100,
-    borderWidth: 1,
-    borderColor: '#D3D5DB',
-  },
-  authorName: {
-    fontSize: 12,
-  },
-  viewCountContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   smallIcon: {
     width: 14,
     height: 14,
     marginRight: 4,
-  },
-  metaText: {
-    fontSize: 12,
   },
   cardContent: {
     alignItems: 'flex-start',

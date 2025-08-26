@@ -16,8 +16,8 @@ import {useTranslation} from 'react-i18next';
 import SearchIcon from '@shared/assets/icons/SearchIcon';
 
 type DepartmentSelectionProps = {
-  selectedDepartment: string | null;
-  onDepartmentSelect: (department: string) => void;
+  selectedDepartment: Department | null;
+  onDepartmentSelect: (department: Department) => void;
 };
 
 const DepartmentSelection = ({
@@ -28,7 +28,6 @@ const DepartmentSelection = ({
   const [searchText, setSearchText] = useState('');
   const searchInputRef = useRef<TextInput>(null);
   const {t, i18n} = useTranslation();
-
   const currentLanguage = i18n.language.startsWith('ko') ? 'ko' : 'en';
 
   // 검색어에 따른 필터링된 학과 목록
@@ -56,15 +55,15 @@ const DepartmentSelection = ({
   };
 
   const handleSelect = (department: Department) => {
-    // 학과 객체에서 현재 언어에 맞는 이름을 추출해서 저장
-    onDepartmentSelect(getDepartmentName(department, currentLanguage));
+    // Department 객체 전체를 전달
+    onDepartmentSelect(department);
     closeModal();
   };
 
   // 선택된 학과명 표시
   const getSelectedDepartmentDisplay = () => {
     if (!selectedDepartment) return '';
-    return selectedDepartment;
+    return getDepartmentName(selectedDepartment, currentLanguage);
   };
 
   return (
@@ -118,7 +117,7 @@ const DepartmentSelection = ({
                 <View style={styles.resultsContainer}>
                   <FlatList
                     data={filteredDepartments}
-                    keyExtractor={(item, index) => index.toString()}
+                    keyExtractor={item => item.code}
                     renderItem={({item}) => (
                       <TouchableOpacity
                         style={styles.departmentItem}

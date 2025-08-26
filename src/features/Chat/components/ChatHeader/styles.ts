@@ -21,4 +21,9 @@ export const styles = StyleSheet.create({
     width: 24,
     height: 24,
   },
+  rightSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
 });

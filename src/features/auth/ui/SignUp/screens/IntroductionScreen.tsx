@@ -29,7 +29,7 @@ const IntroductionScreen: React.FC<IntroductionScreenProps> = ({
       <View style={styles.headerSection}>
         <Text
           variant="h2"
-          weight="bold"
+          weight="semiBold"
           color={colors.richBlack}
           style={styles.title}>
           {t('signup.introduction.title', '본인을 한 줄로 소개해보세요 :)')}

@@ -1,18 +1,94 @@
 import {ChatRoom, ChatDetails, ChatMessage} from '../entities/types';
 import {dummyChatRooms, dummyChatDetails} from './dummyData';
+import {
+  getHostedDmRooms,
+  getParticipatedDmRooms,
+  getGroupChatRooms,
+} from '../api/api';
 
 // 채팅방 목록을 가져오는 함수
 export const fetchChatRooms = async (): Promise<ChatRoom[]> => {
   try {
-    // 실제 API 호출 로직이 들어갈 자리
-    // const response = await api.get('/chatrooms');
-    // return response.data;
+    console.log('[Chat Model] 채팅방 목록 조회 시작');
 
-    // 임시로 더미 데이터 반환
-    return dummyChatRooms;
+    // DM 채팅방 목록 조회
+    const [hostedDmRooms, participatedDmRooms] = await Promise.all([
+      getHostedDmRooms().catch(error => {
+        console.error('[Chat Model] 호스트 DM 채팅방 조회 실패:', error);
+        return {data: []};
+      }),
+      getParticipatedDmRooms().catch(error => {
+        console.error('[Chat Model] 참여자 DM 채팅방 조회 실패:', error);
+        return {data: []};
+      }),
+    ]);
+
+    // 그룹 채팅방 목록 조회
+    const groupRooms = await getGroupChatRooms().catch(error => {
+      console.error('[Chat Model] 그룹 채팅방 조회 실패:', error);
+      return {data: []};
+    });
+
+    // DM 채팅방을 ChatRoom 형식으로 변환
+    const dmRooms: ChatRoom[] = [
+      ...hostedDmRooms.data.map(room => ({
+        id: room.dmChatRoomId.toString(),
+        name: room.otherUser?.userName || '알 수 없는 사용자',
+        lastMessage: room.lastMessage || '',
+        lastMessageTime: room.lastMessageTime || '',
+        unreadCount: room.hasUnreadMessages ? 1 : 0,
+        memberCount: 2, // DM은 항상 2명
+        type: 'direct' as const,
+        dmChatRoomId: room.dmChatRoomId,
+        meetingId: room.meetingId,
+        otherUser: room.otherUser,
+      })),
+      ...participatedDmRooms.data.map(room => ({
+        id: room.dmChatRoomId.toString(),
+        name: room.otherUser?.userName || '알 수 없는 사용자',
+        lastMessage: room.lastMessage || '',
+        lastMessageTime: room.lastMessageTime || '',
+        unreadCount: room.hasUnreadMessages ? 1 : 0,
+        memberCount: 2, // DM은 항상 2명
+        type: 'direct' as const,
+        dmChatRoomId: room.dmChatRoomId,
+        meetingId: room.meetingId,
+        otherUser: room.otherUser,
+      })),
+    ];
+
+    // 그룹 채팅방을 ChatRoom 형식으로 변환
+    const groupChatRooms: ChatRoom[] = groupRooms.data.map(room => ({
+      id: room.groupChatroomId.toString(),
+      name: room.meeting?.meetingTitle || '알 수 없는 모임',
+      lastMessage: room.lastMessage || '',
+      lastMessageTime: room.lastMessageTime || '',
+      unreadCount: room.hasUnreadMessages ? 1 : 0,
+      memberCount: room.meeting?.currentParticipants || 0,
+      type: 'group' as const,
+      groupChatroomId: room.groupChatroomId,
+      meeting: room.meeting,
+    }));
+
+    // 중복 제거 (DM 채팅방은 hosted와 participated에서 중복될 수 있음)
+    const uniqueDmRooms = dmRooms.filter(
+      (room, index, self) =>
+        index === self.findIndex(r => r.dmChatRoomId === room.dmChatRoomId),
+    );
+
+    const allRooms = [...uniqueDmRooms, ...groupChatRooms];
+
+    console.log('[Chat Model] 채팅방 목록 조회 완료:', {
+      dmCount: uniqueDmRooms.length,
+      groupCount: groupChatRooms.length,
+      totalCount: allRooms.length,
+    });
+
+    return allRooms;
   } catch (error) {
-    console.error('채팅방 목록을 불러오는데 실패했습니다.', error);
-    return [];
+    console.error('[Chat Model] 채팅방 목록 조회 중 오류:', error);
+    // 오류 발생 시 더미 데이터 반환
+    return dummyChatRooms;
   }
 };
 

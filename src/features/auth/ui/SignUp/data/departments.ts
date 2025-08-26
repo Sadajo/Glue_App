@@ -250,12 +250,6 @@ export const departments: Department[] = [
     kedi: 'U04100100133',
   },
   {
-    ko: '건설융합학부',
-    en: 'School of Construction Convergence',
-    code: '0041216',
-    kedi: 'U04010200092',
-  },
-  {
     ko: '화공생명.환경공학부 화공생명공학전공',
     en: 'Major in Environmental Engineering',
     code: '0041257',
@@ -1139,4 +1133,66 @@ export const getDepartmentName = (
   language: string,
 ): string => {
   return language === 'ko' ? dept.ko : dept.en;
+};
+
+// 학과 ID(major number)를 이용해 학과 이름을 찾는 함수
+export const getDepartmentNameById = (
+  majorId: number,
+  language: string = 'ko',
+): string => {
+  // majorId와 department.code를 숫자로 변환하여 비교
+  const department = departments.find(dept => {
+    // 코드값 앞의 0을 제거하고 숫자로 변환하여 비교
+    const codeAsNumber = parseInt(dept.code, 10);
+    return codeAsNumber === majorId;
+  });
+
+  if (!department) {
+    // 해당 ID에 맞는 학과가 없을 경우
+    return language === 'ko' ? '알 수 없는 학과' : 'Unknown Department';
+  }
+
+  return getDepartmentName(department, language);
+};
+
+// 학과 코드를 이용해 학과 이름을 찾는 함수 (code 필드 사용)
+export const getDepartmentNameByCode = (
+  code: string,
+  language: string = 'ko',
+): string => {
+  const department = departments.find(dept => dept.code === code);
+
+  if (!department) {
+    return language === 'ko' ? '알 수 없는 학과' : 'Unknown Department';
+  }
+
+  return getDepartmentName(department, language);
+};
+
+// 학교 ID와 이름 매핑
+export const getSchoolNameById = (
+  schoolId: number,
+  language: string = 'ko',
+): string => {
+  const schoolNames: Record<number, {ko: string; en: string}> = {
+    272: {ko: '부산대학교', en: 'Pusan National University'},
+    1: {ko: '서울대학교', en: 'Seoul National University'},
+    2: {ko: '연세대학교', en: 'Yonsei University'},
+    3: {ko: '고려대학교', en: 'Korea University'},
+    4: {ko: '성균관대학교', en: 'Sungkyunkwan University'},
+    5: {ko: '한양대학교', en: 'Hanyang University'},
+    6: {ko: '중앙대학교', en: 'Chung-Ang University'},
+    7: {ko: '경희대학교', en: 'Kyung Hee University'},
+    8: {ko: '이화여자대학교', en: 'Ewha Womans University'},
+    9: {ko: '서강대학교', en: 'Sogang University'},
+    10: {ko: '동국대학교', en: 'Dongguk University'},
+    // 필요에 따라 더 많은 학교 추가 가능
+  };
+
+  const school = schoolNames[schoolId];
+  if (!school) {
+    return language === 'ko' ? '알 수 없는 학교' : 'Unknown School';
+  }
+
+  return language === 'ko' ? school.ko : school.en;
 };

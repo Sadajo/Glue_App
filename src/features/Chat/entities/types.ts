@@ -6,6 +6,24 @@ export interface ChatRoom {
   unreadCount?: number;
   memberCount?: number;
   type: 'group' | 'direct'; // 채팅방 타입: 모임톡(그룹) 또는 쪽지(개인)
+
+  // DM 채팅방 추가 정보
+  dmChatRoomId?: number;
+  meetingId?: number;
+  otherUser?: {
+    userId: number;
+    userName: string;
+    profileImageUrl: string | null;
+  };
+
+  // 그룹 채팅방 추가 정보
+  groupChatroomId?: number;
+  meeting?: {
+    meetingId: number;
+    meetingTitle: string;
+    meetingImageUrl: string;
+    currentParticipants: number;
+  };
 }
 
 export interface ChatState {

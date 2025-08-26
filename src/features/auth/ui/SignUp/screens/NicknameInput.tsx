@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState} from 'react';
 import {
   View,
   TextInput,
@@ -26,31 +26,20 @@ const NicknameInput = ({
   const [isDuplicate, setIsDuplicate] = useState(false);
   const {t} = useTranslation();
 
-  // 닉네임 변경 시 중복 확인 타이머
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-
-    if (nickname.trim() !== '') {
-      timer = setTimeout(async () => {
-        if (onNicknameCheck) {
-          const isDup = await onNicknameCheck(nickname);
-          setIsDuplicate(isDup);
-        }
-      }, 500);
-    } else {
-      setIsDuplicate(false);
-    }
-
-    return () => {
-      if (timer) {
-        clearTimeout(timer);
-      }
-    };
-  }, [nickname, onNicknameCheck]);
-
   const handleNicknameChange = (text: string) => {
     setNickname(text);
     onNicknameChange(text);
+    // 닉네임이 변경되면 중복 상태 초기화
+    setIsDuplicate(false);
+  };
+
+  // 포커스가 벗어날 때 닉네임 중복 확인
+  const handleBlur = async () => {
+    setIsFocused(false);
+    if (nickname.trim() !== '' && onNicknameCheck) {
+      const isDup = await onNicknameCheck(nickname);
+      setIsDuplicate(isDup);
+    }
   };
 
   return (
@@ -58,7 +47,11 @@ const NicknameInput = ({
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}>
       <View style={styles.titleContainer}>
-        <Text variant="h2" color={colors.richBlack} style={styles.title}>
+        <Text
+          variant="h2"
+          weight="semiBold"
+          color={colors.richBlack}
+          style={styles.title}>
           {t('signup.nickname.title')}
         </Text>
       </View>
@@ -71,7 +64,7 @@ const NicknameInput = ({
           placeholderTextColor={colors.manatee}
           style={styles.input}
           onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
+          onBlur={handleBlur}
           autoCapitalize="none"
           autoCorrect={false}
         />

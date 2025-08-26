@@ -31,12 +31,27 @@ export {default as ChevronDown} from './chevron-down.svg';
 export {default as ChevronLeft} from './chevron-left.svg';
 export {default as Menu} from './ic_round-menu.svg';
 export {default as Logo} from './logo.svg';
+export {default as SocialIcon} from './social.svg';
+export {default as StudyIcon} from './study.svg';
+export {default as HelpIcon} from './help.svg';
+export {default as CameraIcon} from './camera.svg';
+export {default as ClockIcon} from './clock.svg';
+export {default as CalendarOpacityIcon} from './calendar-opacity.svg';
+export {default as InfoIcon} from './info.svg';
+export {default as ReportIcon} from './report.svg';
+export {default as UserIcon} from './user.svg';
+export {default as SchoolIcon} from './school.svg';
+
+export {default as DotsVertical} from './dots-vertical.svg';
+export {default as LockIcon} from './lock.svg';
+export {default as UnlockIcon} from './unlock.svg';
+
 // 이미지 파일들
 export const logo = require('./logo.png');
-export const dummyProfile = require('./dummy-profile.png');
+export const dummyProfile = require('./default-image.png');
 
 // PNG 파일이 없어서 오류 발생 - 삭제
 // 소셜 로그인은 SVG 파일만 사용
-export { default as BellIcon     } from './bell.svg';
-export { default as SettingsIcon } from './settings.svg';
-export { default as RightArrowIcon } from './right-arrow.svg';
+export {default as BellIcon} from './bell.svg';
+export {default as SettingsIcon} from './settings.svg';
+export {default as RightArrowIcon} from './right-arrow.svg';

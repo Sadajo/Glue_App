@@ -4,6 +4,7 @@ import {
   useQueryClient,
   UseQueryOptions,
   UseMutationOptions,
+  useInfiniteQuery,
 } from '@tanstack/react-query';
 import {AxiosError} from 'axios';
 
@@ -34,6 +35,19 @@ export function useApiQuery<T>(
 
   return useQuery<ApiResponse<T>, AxiosError<ApiError>>({
     queryKey: queryKeyArray,
+    queryFn: fetcher,
+    ...options,
+  });
+}
+
+// 커스텀 무한 쿼리 훅 - 무한 스크롤을 위한 데이터 조회
+export function useApiInfiniteQuery<T>(
+  queryKey: readonly unknown[],
+  fetcher: (params: {pageParam?: unknown}) => Promise<ApiResponse<T>>,
+  options?: any,
+) {
+  return useInfiniteQuery({
+    queryKey,
     queryFn: fetcher,
     ...options,
   });

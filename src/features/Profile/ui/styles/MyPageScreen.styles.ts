@@ -1,28 +1,46 @@
 ﻿// src/features/Profile/ui/styles/MyPageScreen.styles.ts
-import { StyleSheet } from 'react-native';
-import { semanticColors, typography, spacing } from '@app/styles';
+import {StyleSheet} from 'react-native';
+import {typography, spacing} from '@app/styles';
 
 export const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: semanticColors.background },
-  content: { padding: spacing.md },
-  section: { marginBottom: spacing.ls },
+  container: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  content: {
+    padding: spacing.md,
+  },
+  section: {
+    marginBottom: spacing.lg,
+  },
   sectionTitle: {
     ...typography.h4,
-    color: semanticColors.text,
-    marginTop: spacing.ls,
+    color: '#333333',
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: spacing.lg,
     marginBottom: spacing.sm,
   },
-  languageContainer: { flexDirection: 'row', justifyContent: 'space-between' },
-  infoList: { marginTop: spacing.md },
-
+  languageContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  infoList: {
+    marginTop: spacing.md,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
   profileRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: semanticColors.surface,
+    backgroundColor: '#FFFFFF',
     padding: spacing.md,
-    borderRadius: spacing.sm,
+    borderRadius: 12,
     marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
   },
   avatar: {
     width: 48,
@@ -36,11 +54,20 @@ export const styles = StyleSheet.create({
   },
   nickname: {
     ...typography.h3,
-    color: semanticColors.text,
+    color: '#333333',
+    fontWeight: '600',
   },
   bio: {
     ...typography.body2,
-    color: semanticColors.textSecondary,
+    color: '#666666',
     marginTop: spacing.xs,
+  },
+  // 스켈레톤 스타일
+  skeletonElement: {
+    backgroundColor: '#e9ecef',
+  },
+  skeletonText: {
+    backgroundColor: '#e9ecef',
+    borderRadius: 4,
   },
 });

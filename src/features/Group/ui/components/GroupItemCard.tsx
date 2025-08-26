@@ -31,7 +31,7 @@ export const GroupItemCard: React.FC<GroupItemProps> = ({item, onPress}) => {
             <View style={groupListStyles.likesContainer}>
               <Eye style={groupListStyles.likeIcon} />
               <Text variant="body2" style={groupListStyles.likesText}>
-                {item.likes}
+                {item.viewCounts}
               </Text>
             </View>
           </View>
@@ -50,7 +50,7 @@ export const GroupItemCard: React.FC<GroupItemProps> = ({item, onPress}) => {
                 <View style={groupListStyles.metaItem}>
                   <Heart style={groupListStyles.metaIcon} />
                   <Text variant="caption" style={groupListStyles.metaText}>
-                    {item.comments}
+                    {item.likes}
                   </Text>
                 </View>
                 <View style={groupListStyles.metaItem}>
@@ -90,14 +90,17 @@ export const GroupItemCard: React.FC<GroupItemProps> = ({item, onPress}) => {
               <Text
                 variant="caption"
                 color={item.categoryTextColor}
-                style={groupListStyles.categoryText}>
+                style={[
+                  groupListStyles.categoryText,
+                  {color: item.categoryTextColor},
+                ]}>
                 {item.category}
               </Text>
             </View>
             <View style={groupListStyles.likesContainer}>
               <Eye style={groupListStyles.likeIcon} />
               <Text variant="body2" style={groupListStyles.likesText}>
-                {item.likes}
+                {item.viewCounts}
               </Text>
             </View>
           </View>
@@ -115,7 +118,7 @@ export const GroupItemCard: React.FC<GroupItemProps> = ({item, onPress}) => {
               <View style={groupListStyles.metaItem}>
                 <Heart style={groupListStyles.metaIcon} />
                 <Text variant="caption" style={groupListStyles.metaText}>
-                  {item.comments}
+                  {item.likes}
                 </Text>
               </View>
               <View style={groupListStyles.metaItem}>

@@ -41,21 +41,12 @@ export const Header = (props: HeaderProps) => {
     }
   };
 
-  return (
-    <View style={[styles.header]}>
-      <Text
-        variant="h4"
-        weight="bold"
-        color={theme?.colors.primary ? '#FFFFFF' : undefined}>
-        {getTitle()}
-      </Text>
-    </View>
-  );
+  return <View style={[styles.header]} />;
 };
 
 const styles = StyleSheet.create({
   header: {
-    height: 60,
+    // height: 60,
     backgroundColor: 'white',
     justifyContent: 'center',
     alignItems: 'center',
@@ -63,3 +54,8 @@ const styles = StyleSheet.create({
 });
 
 export default Header;
+
+export {default as BackButtonHeader} from './BackButtonHeader';
+export {default as CustomHeader} from './CustomHeader';
+export {default as ProfileEditHeader} from './ProfileEditHeader';
+export {default as SettingsHeader} from './SettingsHeader';
