@@ -167,8 +167,8 @@ const UserProfileDetail: React.FC<UserProfileDetailProps> = ({
             <View style={userProfileDetailStyles.infoItem}>
               <SchoolIcon width={20} height={20} color="#666666" />
               <Text style={userProfileDetailStyles.infoText}>
-                {getSchoolName(userProfile.school)}
-                {userProfile.major && ` ${getMajorName(userProfile.major)}`}
+                {getSchoolName(userProfile.school)}{' '}
+                {getMajorName(userProfile.major)}
               </Text>
             </View>
           </View>
@@ -229,19 +229,37 @@ const UserProfileDetail: React.FC<UserProfileDetailProps> = ({
             {userProfile.nickName} 님의 정보
           </Text>
 
-          <TouchableOpacity style={userProfileDetailStyles.menuItem}>
+          <TouchableOpacity
+            style={userProfileDetailStyles.menuItem}
+            onPress={() =>
+              navigation.navigate('UserGroupHistory', {
+                userId: userProfile.userId,
+              })
+            }>
             <Text style={userProfileDetailStyles.menuText}>
               {t('profile.myGroupsHistory')}
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={userProfileDetailStyles.menuItem}>
+          <TouchableOpacity
+            style={userProfileDetailStyles.menuItem}
+            onPress={() =>
+              navigation.navigate('UserParticipatingMeetings', {
+                userId: userProfile.userId,
+              })
+            }>
             <Text style={userProfileDetailStyles.menuText}>
               {t('profile.myParticipatingGroups')}
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={userProfileDetailStyles.menuItem}>
+          <TouchableOpacity
+            style={userProfileDetailStyles.menuItem}
+            onPress={() =>
+              navigation.navigate('UserLikedGroups', {
+                userId: userProfile.userId,
+              })
+            }>
             <Text style={userProfileDetailStyles.menuText}>
               {t('profile.myLikes')}
             </Text>

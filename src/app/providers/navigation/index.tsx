@@ -36,6 +36,9 @@ import {
   UserProfileDetail,
   GuestbookScreen,
   DescriptionEditScreen,
+  UserGroupHistoryScreen,
+  UserLikedGroupsScreen,
+  UserParticipatingMeetingsScreen,
 } from '@features/Profile';
 
 // 설정 화면 임포트
@@ -367,13 +370,7 @@ const MainNavigator = () => (
         header: PrivacySettingsHeader,
       }}
     />
-    <MainStack.Screen
-      name="Guestbook"
-      component={GuestbookScreen as any}
-      options={{
-        headerShown: false,
-      }}
-    />
+
   </MainStack.Navigator>
 );
 
@@ -436,6 +433,30 @@ export const AppNavigator = () => {
         component={PopularPostsList}
         options={{
           headerShown: false,
+        }}
+      />
+      <RootStack.Screen
+        name="UserGroupHistory"
+        component={UserGroupHistoryScreen}
+        options={{
+          headerShown: true,
+          header: GroupHistoryHeader,
+        }}
+      />
+      <RootStack.Screen
+        name="UserLikedGroups"
+        component={UserLikedGroupsScreen}
+        options={{
+          headerShown: true,
+          header: LikedGroupsHeader,
+        }}
+      />
+      <RootStack.Screen
+        name="UserParticipatingMeetings"
+        component={UserParticipatingMeetingsScreen}
+        options={{
+          headerShown: true,
+          header: MyParticipatingMeetingsHeader,
         }}
       />
     </RootStack.Navigator>

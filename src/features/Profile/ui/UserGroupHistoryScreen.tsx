@@ -1,4 +1,4 @@
-﻿// src/features/Profile/ui/GroupHistoryScreen.tsx
+// src/features/Profile/ui/UserGroupHistoryScreen.tsx
 import React, {useState} from 'react';
 import {
   SafeAreaView,
@@ -10,20 +10,20 @@ import {
 } from 'react-native';
 import {GroupHistoryCard} from './components/GroupHistoryCard';
 import {useMeetingsHistory} from '../model/useProfile';
-import {useProfileMe} from '../model/useProfileMe';
 import {styles} from './styles/GroupHistory.styles';
 
-export const GroupHistoryScreen = () => {
-  const {data: profileData, isLoading: isProfileLoading} = useProfileMe();
+export const UserGroupHistoryScreen = ({route}: any) => {
+  const {userId} = route.params;
   const {
     hostedMeetings,
     joinedMeetings,
     isLoading: isHistoryLoading,
     isError,
-  } = useMeetingsHistory(profileData?.userId || 0);
+    error,
+  } = useMeetingsHistory(userId);
   const [activeTab, setActiveTab] = useState<'hosted' | 'joined'>('hosted');
 
-  if (isProfileLoading || isHistoryLoading) {
+  if (isHistoryLoading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
@@ -37,11 +37,15 @@ export const GroupHistoryScreen = () => {
   }
 
   if (isError) {
+    console.log(error);
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
+          <Text style={styles.errorIcon}>🔒</Text>
+          <Text style={styles.errorTitle}>비공개로 설정되어 있어요</Text>
           <Text style={styles.errorText}>
-            모임 히스토리를 불러오는데 실패했습니다.
+            이 사용자는 모임 히스토리를 비공개로 설정했어요.{'\n'}
+            다른 정보를 확인해보세요! 😊
           </Text>
         </View>
       </SafeAreaView>

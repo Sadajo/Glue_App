@@ -13,6 +13,11 @@ export {default as UserProfileDetail} from './ui/UserProfileDetail';
 export {default as GuestbookScreen} from './ui/GuestbookScreen';
 export {default as DescriptionEditScreen} from './ui/DescriptionEditScreen';
 
+// 새로운 사용자별 화면들
+export {UserGroupHistoryScreen} from './ui/UserGroupHistoryScreen';
+export {UserLikedGroupsScreen} from './ui/UserLikedGroupsScreen';
+export {UserParticipatingMeetingsScreen} from './ui/UserParticipatingMeetingsScreen';
+
 // 모델 훅 & 타입도 한 번에
 export * from './model/useProfile';
 export * from './model/types';

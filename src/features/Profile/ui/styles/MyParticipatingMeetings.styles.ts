@@ -1,8 +1,8 @@
 // src/features/Profile/ui/styles/MyParticipatingMeetings.styles.ts
-import { StyleSheet, Dimensions } from 'react-native';
-import { semanticColors, typography, spacing } from '@app/styles';
+import {StyleSheet, Dimensions} from 'react-native';
+import {semanticColors, typography, spacing} from '@app/styles';
 
-const { width } = Dimensions.get('window');
+const {width} = Dimensions.get('window');
 const cardWidth = (width - spacing.md * 3) / 2; // 좌우 패딩과 카드 간격을 고려한 너비
 
 export const styles = StyleSheet.create({
@@ -28,10 +28,22 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     padding: spacing.xl,
   },
+  errorIcon: {
+    fontSize: 48,
+    marginBottom: spacing.md,
+  },
+  errorTitle: {
+    ...typography.h3,
+    color: semanticColors.text,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+    fontWeight: '600',
+  },
   errorText: {
     ...typography.body1,
-    color: semanticColors.error,
+    color: semanticColors.textSecondary,
     textAlign: 'center',
+    lineHeight: 24,
   },
   tabContainer: {
     flexDirection: 'row',

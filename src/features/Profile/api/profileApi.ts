@@ -651,9 +651,13 @@ export const getMeetingsHistory = async (
 };
 
 // 내가 참여 중인 모임 조회 API
-export const getMyMeetings = async (): Promise<MyMeetingsResponse['result']> => {
+export const getMyMeetings = async (): Promise<
+  MyMeetingsResponse['result']
+> => {
   try {
-    const response = await profileApi.get<MyMeetingsResponse>('/api/meetings/my');
+    const response = await profileApi.get<MyMeetingsResponse>(
+      '/api/meetings/my',
+    );
 
     if (response.data.isSuccess) {
       return response.data.result;

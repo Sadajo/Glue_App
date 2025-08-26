@@ -1,36 +1,34 @@
 ﻿// src/features/Profile/model/useProfile.ts
 
-import { useApiQuery, useApiMutation } from '@/shared/lib/api/hooks';
-import { useQuery } from '@tanstack/react-query';
-import { mockProfileApi as api } from './api';
-import { getUserLikes, getMeetingsHistory, getMyMeetings } from '../api/profileApi';
+import {useApiQuery, useApiMutation} from '@/shared/lib/api/hooks';
+import {useQuery} from '@tanstack/react-query';
+import {mockProfileApi as api} from './api';
 import {
-  UserProfile,
-  GroupHistoryItem,
-  LikedGroupItem,
-} from './types';
+  getUserLikes,
+  getMeetingsHistory,
+  getMyMeetings,
+} from '../api/profileApi';
+import {UserProfile, GroupHistoryItem, LikedGroupItem} from './types';
 
 /**
  * 프로필 정보 조회/수정 훅
  */
 export function useProfile() {
   // 조회
-  const profileQuery = useApiQuery<UserProfile>(
-    ['profile'],
-    () => api.fetchProfile()
+  const profileQuery = useApiQuery<UserProfile>(['profile'], () =>
+    api.fetchProfile(),
   );
 
   // 수정
-  const updateProfileMutation = useApiMutation<UserProfile, Partial<UserProfile>>(
-    'profile',
-    (data) => api.updateProfile(data),
-    {
-      onSuccess: () => {
-        // 수정 성공 시 프로필 다시 불러오기
-        profileQuery.refetch();
-      },
-    }
-  );
+  const updateProfileMutation = useApiMutation<
+    UserProfile,
+    Partial<UserProfile>
+  >('profile', data => api.updateProfile(data), {
+    onSuccess: () => {
+      // 수정 성공 시 프로필 다시 불러오기
+      profileQuery.refetch();
+    },
+  });
 
   return {
     profile: profileQuery.data?.data,
@@ -48,7 +46,7 @@ export function useProfile() {
 export function useGroupHistory() {
   const historyQuery = useApiQuery<GroupHistoryItem[]>(
     ['profile', 'history'],
-    () => api.fetchGroupHistory()
+    () => api.fetchGroupHistory(),
   );
 
   return {
@@ -63,9 +61,8 @@ export function useGroupHistory() {
  * 좋아요한 모임 조회 훅
  */
 export function useLikedGroups() {
-  const likedQuery = useApiQuery<LikedGroupItem[]>(
-    ['profile', 'liked'],
-    () => api.fetchLikedGroups()
+  const likedQuery = useApiQuery<LikedGroupItem[]>(['profile', 'liked'], () =>
+    api.fetchLikedGroups(),
   );
 
   return {
@@ -133,7 +130,9 @@ export function useMyMeetings() {
   return {
     hostedMeetings: myMeetingsQuery.data?.hostedMeetings || [],
     joinedMeetings: myMeetingsQuery.data?.joinedMeetings || [],
-    totalMeetings: (myMeetingsQuery.data?.hostedMeetings?.length || 0) + (myMeetingsQuery.data?.joinedMeetings?.length || 0),
+    totalMeetings:
+      (myMeetingsQuery.data?.hostedMeetings?.length || 0) +
+      (myMeetingsQuery.data?.joinedMeetings?.length || 0),
     isLoading: myMeetingsQuery.isLoading,
     isError: myMeetingsQuery.isError,
     error: myMeetingsQuery.error,
