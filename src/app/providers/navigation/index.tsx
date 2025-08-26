@@ -472,103 +472,103 @@ export const AppNavigator = () => {
   }
 
   return (
-    <RootStack.Navigator screenOptions={{headerShown: false}}>
-      {isLoggedIn ? (
-        // 로그인된 경우 메인 화면들
-        <>
-          <RootStack.Screen name="Main" component={MainNavigator} />
-          <GroupStack.Screen
-            name="GroupCreate"
-            component={GroupCreate}
-            options={{
-              headerShown: false,
-            }}
-          />
-          <GroupStack.Screen
-            name="GroupCreateStep2"
-            component={GroupCreateStep2}
-            options={{
-              headerShown: false,
-            }}
-          />
-          <GroupStack.Screen
-            name="GroupCreateStep3"
-            component={GroupCreateStep3}
-            options={{
-              headerShown: false,
-            }}
-          />
-          <GroupStack.Screen
-            name="GroupCreateStep4"
-            component={GroupCreateStep4}
-            options={{
-              headerShown: false,
-            }}
-          />
-          <GroupStack.Screen
-            name="GroupDetail"
-            component={GroupDetail}
-            options={{headerShown: false}}
-          />
-          <GroupStack.Screen
-            name="UserProfile"
-            component={UserProfileDetail}
-            options={{headerShown: false}}
-          />
-          <MessagesStack.Screen
-            name="ChatRoom"
-            component={ChatRoomScreen}
-            options={{headerShown: false}}
-          />
-          <MessagesStack.Screen
-            name="GroupChatRoomScreen"
-            component={GroupChatRoomScreen}
-            options={{headerShown: false}}
-          />
-          <RootStack.Screen
-            name="PopularPostsList"
-            component={PopularPostsList}
-            options={{
-              headerShown: false,
-            }}
-          />
-          <RootStack.Screen
-            name="UserGroupHistory"
-            component={UserGroupHistoryScreen}
-            options={{
-              headerShown: true,
-              header: GroupHistoryHeader,
-            }}
-          />
-          <RootStack.Screen
-            name="UserLikedGroups"
-            component={UserLikedGroupsScreen}
-            options={{
-              headerShown: true,
-              header: LikedGroupsHeader,
-            }}
-          />
-          <RootStack.Screen
-            name="UserParticipatingMeetings"
-            component={UserParticipatingMeetingsScreen}
-            options={{
-              headerShown: true,
-              header: MyParticipatingMeetingsHeader,
-            }}
-          />
-          <RootStack.Screen
-            name="Guestbook"
-            component={GuestbookScreen as any}
-            options={{
-              headerShown: false,
-              header: GuestbookHeader,
-            }}
-          />
-        </>
-      ) : (
-        // 로그인되지 않은 경우 인증 화면
-        <RootStack.Screen name="Auth" component={AuthNavigator} />
-      )}
+    <RootStack.Navigator
+      screenOptions={{headerShown: false}}
+      initialRouteName={isLoggedIn ? 'Main' : 'Auth'}>
+      {/* 인증 화면 - 항상 존재 */}
+      <RootStack.Screen name="Auth" component={AuthNavigator} />
+
+      {/* 메인 화면 - 항상 존재 */}
+      <RootStack.Screen name="Main" component={MainNavigator} />
+
+      {/* 기타 화면들 */}
+      <GroupStack.Screen
+        name="GroupCreate"
+        component={GroupCreate}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <GroupStack.Screen
+        name="GroupCreateStep2"
+        component={GroupCreateStep2}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <GroupStack.Screen
+        name="GroupCreateStep3"
+        component={GroupCreateStep3}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <GroupStack.Screen
+        name="GroupCreateStep4"
+        component={GroupCreateStep4}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <GroupStack.Screen
+        name="GroupDetail"
+        component={GroupDetail}
+        options={{headerShown: false}}
+      />
+      <GroupStack.Screen
+        name="UserProfile"
+        component={UserProfileDetail}
+        options={{headerShown: false}}
+      />
+      <MessagesStack.Screen
+        name="ChatRoom"
+        component={ChatRoomScreen}
+        options={{headerShown: false}}
+      />
+      <MessagesStack.Screen
+        name="GroupChatRoomScreen"
+        component={GroupChatRoomScreen}
+        options={{headerShown: false}}
+      />
+      <RootStack.Screen
+        name="PopularPostsList"
+        component={PopularPostsList}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <RootStack.Screen
+        name="UserGroupHistory"
+        component={UserGroupHistoryScreen}
+        options={{
+          headerShown: true,
+          header: GroupHistoryHeader,
+        }}
+      />
+      <RootStack.Screen
+        name="UserLikedGroups"
+        component={UserLikedGroupsScreen}
+        options={{
+          headerShown: true,
+          header: LikedGroupsHeader,
+        }}
+      />
+      <RootStack.Screen
+        name="UserParticipatingMeetings"
+        component={UserParticipatingMeetingsScreen}
+        options={{
+          headerShown: true,
+          header: MyParticipatingMeetingsHeader,
+        }}
+      />
+      <RootStack.Screen
+        name="Guestbook"
+        component={GuestbookScreen as any}
+        options={{
+          headerShown: false,
+          header: GuestbookHeader,
+        }}
+      />
     </RootStack.Navigator>
   );
 };
