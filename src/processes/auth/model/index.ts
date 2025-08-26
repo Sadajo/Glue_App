@@ -37,15 +37,14 @@ export const useAuth = () => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // 개선된 토큰 검증 사용 (서버 검증 포함)
-        const isValid = await secureStorage.validateTokenCompletely();
+        // 단순화된 토큰 검증 사용
+        const isValid = await secureStorage.isTokenValid();
 
         if (isValid) {
           // 사용자 정보 불러오기 로직
-          const userJson = await AsyncStorage.getItem('user_info');
+          const userData = await secureStorage.getUserData();
 
-          if (userJson) {
-            const userData = JSON.parse(userJson) as User;
+          if (userData) {
             setUser(userData);
             setAuthStatus('authenticated');
             logger.info('사용자 인증 상태: 로그인됨', {userId: userData.id});
@@ -105,10 +104,7 @@ export const useAuth = () => {
           await secureStorage.saveToken(response.data.token);
 
           // 사용자 정보 저장
-          await AsyncStorage.setItem(
-            'user_info',
-            JSON.stringify(response.data.user),
-          );
+          await secureStorage.saveUserData(response.data.user);
 
           // 상태 업데이트
           setUser(response.data.user);
@@ -133,25 +129,23 @@ export const useAuth = () => {
   );
 
   // 로그아웃 처리
-  const logout = useCallback(async (): Promise<boolean> => {
+  const logout = useCallback(async () => {
     try {
       setIsLoading(true);
 
-      // 로그아웃 처리
-      await clearAuth();
+      // 모든 인증 데이터 삭제
+      await secureStorage.clearAllAuthData();
 
-      // 인증 상태 업데이트
-      setAuthStatus('unauthenticated');
+      // 상태 초기화
       setUser(null);
+      setAuthStatus('unauthenticated');
 
-      // 캐시된 쿼리 데이터 초기화 (선택적)
+      // 쿼리 캐시 초기화
       queryClient.clear();
 
-      logger.info('로그아웃 성공');
-      return true;
+      logger.info('사용자 로그아웃 완료');
     } catch (error) {
-      logger.error('로그아웃 실패', error);
-      return false;
+      logger.error('로그아웃 중 오류 발생', error);
     } finally {
       setIsLoading(false);
     }
@@ -184,10 +178,7 @@ export const useAuth = () => {
 
         if (saveResult) {
           // 사용자 정보 저장
-          await AsyncStorage.setItem(
-            'user_info',
-            JSON.stringify(response.data.user),
-          );
+          await secureStorage.saveUserData(response.data.user);
 
           // 상태 업데이트
           setUser(response.data.user);
@@ -208,11 +199,17 @@ export const useAuth = () => {
     [],
   );
 
-  // 인증 정보 초기화 (내부용)
-  const clearAuth = async () => {
-    await secureStorage.removeToken();
-    await AsyncStorage.removeItem('user_info');
-  };
+  // 인증 데이터 초기화
+  const clearAuth = useCallback(async () => {
+    try {
+      await secureStorage.clearAllAuthData();
+      setUser(null);
+      setAuthStatus('unauthenticated');
+      queryClient.clear();
+    } catch (error) {
+      logger.error('인증 데이터 초기화 중 오류 발생', error);
+    }
+  }, [queryClient]);
 
   return {
     authStatus,

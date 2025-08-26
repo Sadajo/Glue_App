@@ -1,99 +1,87 @@
-import * as Keychain from 'react-native-keychain';
-import {config} from '@/shared/config/env';
-import {logger} from '@/shared/lib/logger';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {logger} from '@/shared/lib/logger';
 import {jwtDecode} from 'jwt-decode';
 
-// 사용자 ID를 AsyncStorage에 저장하기 위한 키
-const USER_ID_STORAGE_KEY = 'user_id';
+// 스토리지 키 상수
+const AUTH_TOKEN_KEY = 'auth_token';
+const USER_DATA_KEY = 'user_data';
+const LOGIN_TIMESTAMP_KEY = 'login_timestamp';
+const USER_ID_KEY = 'user_id';
 
-// 토큰 캐시 및 동시 접근 제어를 위한 변수들
-let tokenCache: string | null = null;
-let tokenCacheTimestamp: number = 0;
-let isTokenLoading = false;
-let tokenValidationPromise: Promise<boolean> | null = null;
-
-// 토큰 캐시 유효 시간 (30초)
-const TOKEN_CACHE_DURATION = 30 * 1000;
+// 토큰 만료 시간 (7일로 연장)
+const TOKEN_EXPIRY_DURATION = 7 * 24 * 60 * 60 * 1000;
 
 /**
- * 보안 스토리지 유틸리티
- * 민감한 데이터(토큰 등)를 안전하게 저장합니다.
+ * 단순화된 인증 스토리지 유틸리티
+ * AsyncStorage 기반으로 안정적인 자동 로그인을 제공합니다.
  */
 export const secureStorage = {
   /**
-   * 인증 토큰을 안전하게 저장합니다.
+   * 인증 데이터를 저장합니다.
    */
   async saveToken(token: string): Promise<boolean> {
     try {
-      const result = await Keychain.setGenericPassword(
-        config.AUTH_STORAGE_KEY,
-        token,
-      );
+      console.log('saveToken 호출됨, 토큰:', token ? '존재' : '없음');
+      const timestamp = Date.now();
 
-      // 캐시 업데이트
-      if (result) {
-        tokenCache = token;
-        tokenCacheTimestamp = Date.now();
+      // 토큰에서 사용자 ID 추출
+      const userId = await this.extractUserIdFromToken(token);
+      console.log('추출된 사용자 ID:', userId);
+
+      // 모든 데이터를 한 번에 저장
+      const itemsToSet: [string, string][] = [
+        [AUTH_TOKEN_KEY, token],
+        [LOGIN_TIMESTAMP_KEY, timestamp.toString()],
+      ];
+
+      if (userId) {
+        itemsToSet.push([USER_ID_KEY, userId.toString()]);
       }
 
-      // 토큰 저장 후 사용자 ID를 추출하여 AsyncStorage에 저장
-      try {
-        const userId = await this.extractUserIdFromToken(token);
-        if (userId) {
-          await AsyncStorage.setItem(USER_ID_STORAGE_KEY, String(userId));
-          logger.info('사용자 ID 저장 성공', {userId});
-        }
-      } catch (idError) {
-        logger.error('토큰에서 사용자 ID 추출 실패', idError);
-      }
+      console.log('저장할 아이템들:', itemsToSet);
+      await AsyncStorage.multiSet(itemsToSet);
 
-      return !!result;
+      console.log('인증 토큰 저장 성공');
+      return true;
     } catch (error) {
-      logger.error('Failed to save auth token', error);
+      console.error('인증 토큰 저장 실패:', error);
       return false;
     }
   },
 
   /**
    * 저장된 인증 토큰을 가져옵니다.
-   * 캐시를 사용하여 성능을 향상시킵니다.
    */
   async getToken(): Promise<string | null> {
-    // 캐시된 토큰이 유효한지 확인
-    if (tokenCache && Date.now() - tokenCacheTimestamp < TOKEN_CACHE_DURATION) {
-      return tokenCache;
-    }
-
-    // 이미 토큰을 로딩 중인 경우 대기
-    if (isTokenLoading) {
-      return new Promise(resolve => {
-        const checkInterval = setInterval(() => {
-          if (!isTokenLoading) {
-            clearInterval(checkInterval);
-            resolve(tokenCache);
-          }
-        }, 10);
-      });
-    }
-
-    isTokenLoading = true;
     try {
-      const credentials = await Keychain.getGenericPassword();
-      if (credentials && credentials.password) {
-        tokenCache = credentials.password;
-        tokenCacheTimestamp = Date.now();
-        return credentials.password;
+      console.log('getToken 호출됨');
+      const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
+
+      if (!token) {
+        console.log('저장된 토큰이 없습니다.');
+        return null;
       }
 
-      tokenCache = null;
-      return null;
+      console.log('토큰 발견:', token ? '존재' : '없음');
+
+      // 토큰 만료 시간 확인 (더 관대하게)
+      const timestamp = await AsyncStorage.getItem(LOGIN_TIMESTAMP_KEY);
+      if (timestamp) {
+        const loginTime = parseInt(timestamp);
+        const now = Date.now();
+
+        if (now - loginTime > TOKEN_EXPIRY_DURATION) {
+          console.log('토큰이 만료되었습니다. 자동 삭제 중...');
+          await this.removeToken();
+          return null;
+        }
+      }
+
+      console.log('토큰 가져오기 성공');
+      return token;
     } catch (error) {
-      logger.error('Failed to get auth token', error);
-      tokenCache = null;
+      console.error('인증 토큰 가져오기 실패:', error);
       return null;
-    } finally {
-      isTokenLoading = false;
     }
   },
 
@@ -102,73 +90,67 @@ export const secureStorage = {
    */
   async removeToken(): Promise<boolean> {
     try {
-      // 캐시 초기화
-      tokenCache = null;
-      tokenCacheTimestamp = 0;
-      tokenValidationPromise = null;
+      await AsyncStorage.multiRemove([
+        AUTH_TOKEN_KEY,
+        LOGIN_TIMESTAMP_KEY,
+        USER_ID_KEY,
+        'user_info', // 기존 사용자 정보도 함께 삭제
+      ]);
 
-      await AsyncStorage.removeItem(USER_ID_STORAGE_KEY);
-      return await Keychain.resetGenericPassword();
+      logger.info('인증 토큰 삭제 완료');
+      return true;
     } catch (error) {
-      logger.error('Failed to remove auth token', error);
+      logger.error('인증 토큰 삭제 실패:', error);
       return false;
     }
   },
 
   /**
-   * 인증 토큰의 유효성을 확인합니다.
-   * 토큰 존재 여부와 만료 시간을 검사합니다.
+   * 토큰의 유효성을 확인합니다.
    */
   async isTokenValid(): Promise<boolean> {
-    // 진행 중인 검증이 있다면 대기
-    if (tokenValidationPromise) {
-      return tokenValidationPromise;
-    }
-
-    const validationPromise = this._performTokenValidation();
-    tokenValidationPromise = validationPromise;
-
-    return validationPromise;
-  },
-
-  /**
-   * 실제 토큰 검증을 수행하는 내부 메서드
-   */
-  async _performTokenValidation(): Promise<boolean> {
-    const token = await this.getToken();
-    if (!token) {
-      logger.info('저장된 토큰이 없습니다.');
-      return false;
-    }
-
     try {
-      // 클라이언트 측 토큰 만료 검사
-      const decoded = jwtDecode<{exp: number}>(token);
-      const currentTime = Date.now() / 1000;
-      const bufferTime = 30; // 30초 버퍼 추가 (네트워크 지연 고려)
-      const isClientValid = decoded.exp > currentTime + bufferTime;
-
-      if (!isClientValid) {
-        logger.info('토큰이 만료되었습니다. 자동 삭제 중...');
-        await this.removeToken();
+      console.log('isTokenValid 호출됨');
+      const token = await this.getToken();
+      if (!token) {
+        console.log('토큰이 없어서 유효성 검증 실패');
         return false;
       }
 
+      console.log('토큰 존재, JWT 검증 시작');
+
+      // JWT 만료 시간 확인 (더 관대하게)
+      try {
+        const decoded = jwtDecode<{exp: number}>(token);
+        const currentTime = Date.now() / 1000;
+        const bufferTime = 300; // 5분 버퍼로 늘림
+
+        console.log('JWT 디코드 결과:', decoded);
+        console.log('현재 시간:', currentTime);
+        console.log('만료 시간:', decoded.exp);
+
+        if (decoded.exp && decoded.exp < currentTime + bufferTime) {
+          console.log('JWT 토큰이 만료되었습니다.');
+          await this.removeToken();
+          return false;
+        }
+      } catch (jwtError) {
+        console.error('JWT 토큰 검증 실패:', jwtError);
+        // JWT 파싱 실패해도 토큰이 있으면 유효하다고 간주
+        console.log('JWT 파싱 실패했지만 토큰이 존재하므로 유효하다고 간주');
+        return true;
+      }
+
+      console.log('토큰 유효성 검증 성공');
       return true;
     } catch (error) {
-      logger.error('JWT 토큰 검증 실패:', error);
-      // 토큰이 잘못된 형식이면 삭제
-      await this.removeToken();
+      console.error('토큰 유효성 확인 실패:', error);
       return false;
-    } finally {
-      // 검증 완료 후 promise 초기화
-      tokenValidationPromise = null;
     }
   },
 
   /**
-   * 전체 토큰 검증
-   * 자동 로그인 시 사용
+   * 전체 토큰 검증 (자동 로그인용)
    */
   async validateTokenCompletely(): Promise<boolean> {
     return this.isTokenValid();
@@ -180,11 +162,9 @@ export const secureStorage = {
   async extractUserIdFromToken(token: string): Promise<number | null> {
     try {
       const decoded = jwtDecode<any>(token);
-      logger.info('JWT 디코드 성공', decoded);
 
-      // 다양한 필드명 확인 (각 백엔드에 따라 다를 수 있음)
+      // 다양한 필드명 확인
       if (decoded.memberId) {
-        logger.info('memberId 필드에서 사용자 ID 발견', decoded.memberId);
         return Number(decoded.memberId);
       } else if (decoded.sub) {
         return Number(decoded.sub);
@@ -196,11 +176,10 @@ export const secureStorage = {
         return Number(decoded.user_id);
       }
 
-      // 전체 디코딩 결과 출력 (디버깅용)
-      logger.warn('토큰에서 사용자 ID를 찾을 수 없음. 전체 내용:', decoded);
+      logger.warn('토큰에서 사용자 ID를 찾을 수 없음:', decoded);
       return null;
     } catch (error) {
-      logger.error('JWT 디코드 실패', error);
+      logger.error('JWT 디코드 실패:', error);
       return null;
     }
   },
@@ -210,27 +189,107 @@ export const secureStorage = {
    */
   async getUserId(): Promise<number | null> {
     try {
-      // 1. AsyncStorage에서 먼저 확인 (가장 빠름)
-      const storedId = await AsyncStorage.getItem(USER_ID_STORAGE_KEY);
+      // AsyncStorage에서 직접 확인
+      const storedId = await AsyncStorage.getItem(USER_ID_KEY);
       if (storedId) {
         return Number(storedId);
       }
 
-      // 2. 저장된 값이 없으면 토큰에서 추출
+      // 저장된 값이 없으면 토큰에서 추출
       const token = await this.getToken();
       if (token) {
         const userId = await this.extractUserIdFromToken(token);
         if (userId) {
-          // 추출된 ID를 AsyncStorage에 저장하여 다음에는 빠르게 접근
-          await AsyncStorage.setItem(USER_ID_STORAGE_KEY, String(userId));
+          // 추출된 ID를 저장
+          await AsyncStorage.setItem(USER_ID_KEY, String(userId));
           return userId;
         }
       }
 
       return null;
     } catch (error) {
-      logger.error('사용자 ID 가져오기 실패', error);
+      logger.error('사용자 ID 가져오기 실패:', error);
       return null;
+    }
+  },
+
+  /**
+   * 사용자 정보를 저장합니다.
+   */
+  async saveUserData(userData: any): Promise<boolean> {
+    try {
+      await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(userData));
+      logger.info('사용자 정보 저장 성공');
+      return true;
+    } catch (error) {
+      logger.error('사용자 정보 저장 실패:', error);
+      return false;
+    }
+  },
+
+  /**
+   * 저장된 사용자 정보를 가져옵니다.
+   */
+  async getUserData(): Promise<any | null> {
+    try {
+      const userData = await AsyncStorage.getItem(USER_DATA_KEY);
+      return userData ? JSON.parse(userData) : null;
+    } catch (error) {
+      logger.error('사용자 정보 가져오기 실패:', error);
+      return null;
+    }
+  },
+
+  /**
+   * 모든 인증 관련 데이터를 삭제합니다.
+   */
+  async clearAllAuthData(): Promise<boolean> {
+    try {
+      await AsyncStorage.multiRemove([
+        AUTH_TOKEN_KEY,
+        USER_DATA_KEY,
+        LOGIN_TIMESTAMP_KEY,
+        USER_ID_KEY,
+        'user_info',
+      ]);
+
+      logger.info('모든 인증 데이터 삭제 완료');
+      return true;
+    } catch (error) {
+      logger.error('인증 데이터 삭제 실패:', error);
+      return false;
+    }
+  },
+
+  /**
+   * 디버깅용: 현재 저장된 모든 인증 데이터를 확인합니다.
+   */
+  async debugAuthData(): Promise<void> {
+    try {
+      const allKeys = await AsyncStorage.getAllKeys();
+      const authKeys = allKeys.filter(
+        key =>
+          key.includes('auth') ||
+          key.includes('user') ||
+          key.includes('token') ||
+          key.includes('login'),
+      );
+
+      const authData = await AsyncStorage.multiGet(authKeys);
+
+      logger.info('=== 인증 데이터 디버깅 ===');
+      logger.info('인증 관련 키들:', authKeys);
+
+      authData.forEach(([key, value]) => {
+        if (key === AUTH_TOKEN_KEY) {
+          logger.info(`${key}: ${value ? '토큰 존재' : '토큰 없음'}`);
+        } else {
+          logger.info(`${key}: ${value}`);
+        }
+      });
+      logger.info('========================');
+    } catch (error) {
+      logger.error('인증 데이터 디버깅 실패:', error);
     }
   },
 };

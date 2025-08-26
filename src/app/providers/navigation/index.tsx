@@ -1,8 +1,11 @@
-import React from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTranslation} from 'react-i18next';
+import {View, ActivityIndicator} from 'react-native';
+
+import {secureStorage} from '@/shared/lib/security';
 // 홈/게시판 화면 컴포넌트 임포트
 import {HomeScreen} from '@features/Home';
 import PopularPostsList from '@features/Home/ui/PopularPostsList';
@@ -430,99 +433,222 @@ const MainNavigator = () => (
   </MainStack.Navigator>
 );
 
-// 앱 메인 네비게이터
+// 앱 메인 네비게이터 (자동 로그인 상태에 따라 화면 결정)
 export const AppNavigator = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // 인증 상태 확인 함수
+  const checkAuthStatus = useCallback(async () => {
+    try {
+      console.log('=== 인증 상태 확인 시작 ===');
+
+      // 디버깅: 현재 저장된 인증 데이터 확인
+      await secureStorage.debugAuthData();
+
+      console.log('토큰 유효성 검증 중...');
+      const isValid = await secureStorage.isTokenValid();
+
+      console.log('토큰 유효성 결과:', isValid);
+      setIsLoggedIn(isValid);
+    } catch (error) {
+      console.error('인증 상태 확인 중 오류:', error);
+      setIsLoggedIn(false);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // 앱 시작 시 인증 상태 확인
+  useEffect(() => {
+    checkAuthStatus();
+  }, [checkAuthStatus]);
+
+  console.log('AppNavigator 렌더링:', {isLoggedIn, isLoading});
+
+  if (isLoading) {
+    // 로딩 중일 때는 로딩 화면 표시
+    return <LoadingScreen />;
+  }
+
   return (
     <RootStack.Navigator screenOptions={{headerShown: false}}>
-      <RootStack.Screen name="Auth" component={AuthNavigator} />
-      <RootStack.Screen name="Main" component={MainNavigator} />
-      <GroupStack.Screen
-        name="GroupCreate"
-        component={GroupCreate}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <GroupStack.Screen
-        name="GroupCreateStep2"
-        component={GroupCreateStep2}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <GroupStack.Screen
-        name="GroupCreateStep3"
-        component={GroupCreateStep3}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <GroupStack.Screen
-        name="GroupCreateStep4"
-        component={GroupCreateStep4}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <GroupStack.Screen
-        name="GroupDetail"
-        component={GroupDetail}
-        options={{headerShown: false}}
-      />
-      <GroupStack.Screen
-        name="UserProfile"
-        component={UserProfileDetail}
-        options={{headerShown: false}}
-      />
-      <MessagesStack.Screen
-        name="ChatRoom"
-        component={ChatRoomScreen}
-        options={{headerShown: false}}
-      />
-      <MessagesStack.Screen
-        name="GroupChatRoomScreen"
-        component={GroupChatRoomScreen}
-        options={{headerShown: false}}
-      />
-      <RootStack.Screen
-        name="PopularPostsList"
-        component={PopularPostsList}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <RootStack.Screen
-        name="UserGroupHistory"
-        component={UserGroupHistoryScreen}
-        options={{
-          headerShown: true,
-          header: GroupHistoryHeader,
-        }}
-      />
-      <RootStack.Screen
-        name="UserLikedGroups"
-        component={UserLikedGroupsScreen}
-        options={{
-          headerShown: true,
-          header: LikedGroupsHeader,
-        }}
-      />
-      <RootStack.Screen
-        name="UserParticipatingMeetings"
-        component={UserParticipatingMeetingsScreen}
-        options={{
-          headerShown: true,
-          header: MyParticipatingMeetingsHeader,
-        }}
-      />
-      <RootStack.Screen
-        name="Guestbook"
-        component={GuestbookScreen as any}
-        options={{
-          headerShown: false,
-          header: GuestbookHeader,
-        }}
-      />
+      {isLoggedIn ? (
+        // 로그인된 경우 메인 화면들
+        <>
+          <RootStack.Screen name="Main" component={MainNavigator} />
+          <GroupStack.Screen
+            name="GroupCreate"
+            component={GroupCreate}
+            options={{
+              headerShown: false,
+            }}
+          />
+          <GroupStack.Screen
+            name="GroupCreateStep2"
+            component={GroupCreateStep2}
+            options={{
+              headerShown: false,
+            }}
+          />
+          <GroupStack.Screen
+            name="GroupCreateStep3"
+            component={GroupCreateStep3}
+            options={{
+              headerShown: false,
+            }}
+          />
+          <GroupStack.Screen
+            name="GroupCreateStep4"
+            component={GroupCreateStep4}
+            options={{
+              headerShown: false,
+            }}
+          />
+          <GroupStack.Screen
+            name="GroupDetail"
+            component={GroupDetail}
+            options={{headerShown: false}}
+          />
+          <GroupStack.Screen
+            name="UserProfile"
+            component={UserProfileDetail}
+            options={{headerShown: false}}
+          />
+          <MessagesStack.Screen
+            name="ChatRoom"
+            component={ChatRoomScreen}
+            options={{headerShown: false}}
+          />
+          <MessagesStack.Screen
+            name="GroupChatRoomScreen"
+            component={GroupChatRoomScreen}
+            options={{headerShown: false}}
+          />
+          <RootStack.Screen
+            name="PopularPostsList"
+            component={PopularPostsList}
+            options={{
+              headerShown: false,
+            }}
+          />
+          <RootStack.Screen
+            name="UserGroupHistory"
+            component={UserGroupHistoryScreen}
+            options={{
+              headerShown: true,
+              header: GroupHistoryHeader,
+            }}
+          />
+          <RootStack.Screen
+            name="UserLikedGroups"
+            component={UserLikedGroupsScreen}
+            options={{
+              headerShown: true,
+              header: LikedGroupsHeader,
+            }}
+          />
+          <RootStack.Screen
+            name="UserParticipatingMeetings"
+            component={UserParticipatingMeetingsScreen}
+            options={{
+              headerShown: true,
+              header: MyParticipatingMeetingsHeader,
+            }}
+          />
+          <RootStack.Screen
+            name="Guestbook"
+            component={GuestbookScreen as any}
+            options={{
+              headerShown: false,
+              header: GuestbookHeader,
+            }}
+          />
+        </>
+      ) : (
+        // 로그인되지 않은 경우 인증 화면
+        <RootStack.Screen name="Auth" component={AuthNavigator} />
+      )}
     </RootStack.Navigator>
   );
 };
+
+// 앱 네비게이션 상태를 관리하는 컨텍스트
+interface NavigationState {
+  isLoggedIn: boolean;
+  isLoading: boolean;
+  checkAuthStatus: () => Promise<void>;
+}
+
+const NavigationContext = React.createContext<NavigationState | undefined>(
+  undefined,
+);
+
+export const useNavigationState = () => {
+  const context = React.useContext(NavigationContext);
+  if (!context) {
+    throw new Error(
+      'useNavigationState must be used within NavigationProvider',
+    );
+  }
+  return context;
+};
+
+// 네비게이션 프로바이더 컴포넌트
+export const NavigationProvider: React.FC<{children: React.ReactNode}> = ({
+  children,
+}) => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // 인증 상태 확인 함수
+  const checkAuthStatus = useCallback(async () => {
+    try {
+      console.log('=== 인증 상태 확인 시작 ===');
+
+      // 디버깅: 현재 저장된 인증 데이터 확인
+      await secureStorage.debugAuthData();
+
+      console.log('토큰 유효성 검증 중...');
+      const isValid = await secureStorage.isTokenValid();
+
+      console.log('토큰 유효성 결과:', isValid);
+      setIsLoggedIn(isValid);
+    } catch (error) {
+      console.error('인증 상태 확인 중 오류:', error);
+      setIsLoggedIn(false);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // 앱 시작 시 인증 상태 확인
+  useEffect(() => {
+    checkAuthStatus();
+  }, [checkAuthStatus]);
+
+  const contextValue: NavigationState = {
+    isLoggedIn,
+    isLoading,
+    checkAuthStatus,
+  };
+
+  return (
+    <NavigationContext.Provider value={contextValue}>
+      {children}
+    </NavigationContext.Provider>
+  );
+};
+
+// 로딩 화면 컴포넌트
+const LoadingScreen = () => (
+  <View
+    style={{
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'white',
+    }}>
+    <ActivityIndicator size="large" color="#1CBFDC" />
+  </View>
+);

@@ -147,11 +147,20 @@ export const signupWithKakao = async (
     console.log('카카오 회원가입 서버 응답:', response.data);
 
     // 서버 응답 구조에 맞게 처리
-    return {
+    const result = {
       data: response.data.result,
       success: response.data.isSuccess,
       message: response.data.message || '',
     };
+
+    // 회원가입 성공 시 토큰 저장
+    if (result.success && result.data.accessToken) {
+      const {secureStorage} = await import('@/shared/lib/security');
+      await secureStorage.saveToken(result.data.accessToken);
+      console.log('카카오 회원가입 토큰 저장 완료');
+    }
+
+    return result;
   } catch (error) {
     if (axios.isAxiosError(error)) {
       // 네트워크 오류
@@ -299,11 +308,20 @@ export const signinWithApple = async (
     console.log('애플 로그인 서버 응답:', response.data);
 
     // 서버 응답 구조에 맞게 처리
-    return {
+    const result = {
       data: response.data.result,
       success: response.data.isSuccess,
       message: response.data.message || '',
     };
+
+    // 로그인 성공 시 토큰 저장
+    if (result.success && result.data.accessToken) {
+      const {secureStorage} = await import('@/shared/lib/security');
+      await secureStorage.saveToken(result.data.accessToken);
+      console.log('애플 로그인 토큰 저장 완료');
+    }
+
+    return result;
   } catch (error) {
     console.log(error);
     if (axios.isAxiosError(error)) {
@@ -385,11 +403,20 @@ export const signupWithApple = async (
     console.log('애플 회원가입 서버 응답:', response.data);
 
     // 서버 응답 구조에 맞게 처리
-    return {
+    const result = {
       data: response.data.result,
       success: response.data.isSuccess,
       message: response.data.message || '',
     };
+
+    // 회원가입 성공 시 토큰 저장
+    if (result.success && result.data.accessToken) {
+      const {secureStorage} = await import('@/shared/lib/security');
+      await secureStorage.saveToken(result.data.accessToken);
+      console.log('애플 회원가입 토큰 저장 완료');
+    }
+
+    return result;
   } catch (error) {
     if (axios.isAxiosError(error)) {
       // 네트워크 오류
