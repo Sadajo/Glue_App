@@ -38,9 +38,9 @@ import {secureStorage} from '@shared/lib/security';
 import {webSocketService} from '../../lib/websocket';
 import {useTranslation} from 'react-i18next';
 import {
-  formatSimpleKSTTime,
   formatKSTDate,
   convertUTCToKST,
+  formatSimpleKSTTime,
 } from '../../lib/timeUtils';
 
 interface ChatRoomScreenProps {
@@ -145,12 +145,32 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({route, navigation}) => {
 
     let isComponentMounted = true;
 
+    // DM 채팅방 구독 시작
+    const subscribeResult =
+      webSocketService.subscribeToDmChatRoom(dmChatRoomId);
+    if (!subscribeResult) {
+      console.error('[ChatRoomScreen] DM 채팅방 구독 실패');
+      return;
+    }
+
     // 메시지 수신 리스너 설정 (이 채팅방 메시지만 필터링)
     webSocketService.setMessageListener((dmMessage: DmMessageResponse) => {
       if (!isComponentMounted) return;
 
       // 현재 채팅방의 메시지만 처리
       if (dmMessage.dmChatRoomId === dmChatRoomId) {
+        // 메시지 ID가 없으면 무시
+        if (!dmMessage.dmMessageId) {
+          console.warn(
+            '[ChatRoomScreen] 메시지 ID가 없는 메시지 무시:',
+            dmMessage,
+          );
+          return;
+        }
+
+        // 이미 캐시된 메시지인지 확인
+        // 메시지 캐시 상태를 더 이상 사용하지 않으므로 제거
+
         const queryKey = ['dmMessages', dmChatRoomId.toString()];
 
         // React Query 캐시에 직접 메시지 추가
@@ -159,7 +179,7 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({route, navigation}) => {
 
           const newPages = [...old.pages];
           if (newPages.length > 0) {
-            // 중복 체크
+            // 중복 체크 (추가 안전장치)
             const firstPageData = newPages[0].data || [];
             const exists = firstPageData.find(
               (msg: DmMessageResponse) =>
@@ -172,6 +192,10 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({route, navigation}) => {
                 ...newPages[0],
                 data: [dmMessage, ...firstPageData],
               };
+              console.log(
+                '[ChatRoomScreen] 새 메시지 캐시에 추가:',
+                dmMessage.dmMessageId,
+              );
             }
           }
 
@@ -180,12 +204,13 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({route, navigation}) => {
       }
     });
 
-    // 클린업: 리스너만 제거, 연결은 Provider에서 관리
+    // 클린업: 리스너 제거 및 DM 채팅방 구독 해제
     return () => {
       isComponentMounted = false;
       webSocketService.setMessageListener(null);
+      webSocketService.unsubscribeFromDmChatRoom(dmChatRoomId);
     };
-  }, [dmChatRoomId, queryClient]);
+  }, [dmChatRoomId, queryClient, currentUserId]);
 
   // 패널을 드래그하여 닫을 수 있는 PanResponder 설정
   const panResponder = useRef(
@@ -248,7 +273,7 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({route, navigation}) => {
     }
   }, [showRoomInfo, isClosing, fadeAnim, slideAnim]);
 
-  // 메시지 전송 핸들러 - React Query 뮤테이션 사용 (이미 낙관적 업데이트 구현됨)
+  // 메시지 전송 핸들러 - React Query 뮤테이션 사용
   const handleSendMessage = useCallback(
     async (text: string) => {
       if (!dmChatRoomId || !currentUserId) {
@@ -257,7 +282,7 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({route, navigation}) => {
       }
 
       try {
-        // useSendDmMessage 훅이 이미 낙관적 업데이트를 처리함
+        // 메시지 전송 - WebSocket으로 응답 받아서 UI 업데이트
         await sendMessageMutation.mutateAsync({
           dmChatRoomId,
           content: text,
@@ -603,9 +628,7 @@ const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({route, navigation}) => {
   const keyExtractor = useCallback((item: DmMessageResponse, index: number) => {
     return (
       item.dmMessageId?.toString() ||
-      `${item.isTemp ? 'temp' : 'msg'}-${
-        item.senderId || item.sender?.userId
-      }-${index}-${item.createdAt}`
+      `msg-${item.senderId || item.sender?.userId}-${index}-${item.createdAt}`
     );
   }, []);
 

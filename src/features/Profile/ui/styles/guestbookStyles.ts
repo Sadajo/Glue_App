@@ -214,4 +214,36 @@ export const guestbookStyles = StyleSheet.create({
     color: '#007AFF',
     fontWeight: '500',
   },
+
+  // 로딩 및 끝 표시
+  loadingContainer: {
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#666666',
+  },
+  endContainer: {
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
+  endText: {
+    fontSize: 14,
+    color: '#999999',
+  },
+
+  // 빈 상태
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#999999',
+    textAlign: 'center',
+    lineHeight: 24,
+  },
 });

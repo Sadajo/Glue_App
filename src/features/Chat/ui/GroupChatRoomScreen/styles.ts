@@ -37,6 +37,23 @@ export const styles = StyleSheet.create({
     color: '#666666',
     textAlign: 'center',
   },
+  systemMessageContainer: {
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginVertical: 4,
+  },
+  systemMessageText: {
+    fontSize: 14,
+    color: '#666666',
+    fontWeight: '500',
+    textAlign: 'center',
+    backgroundColor: '#F5F5F5',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
   stickyDateContainer: {
     position: 'absolute',
     top: 0,

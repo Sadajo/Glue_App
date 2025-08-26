@@ -167,8 +167,8 @@ const UserProfileDetail: React.FC<UserProfileDetailProps> = ({
             <View style={userProfileDetailStyles.infoItem}>
               <SchoolIcon width={20} height={20} color="#666666" />
               <Text style={userProfileDetailStyles.infoText}>
-                {getSchoolName(userProfile.school)}{' '}
-                {getMajorName(userProfile.major)}
+                {getSchoolName(userProfile.school)}
+                {userProfile.major && ` ${getMajorName(userProfile.major)}`}
               </Text>
             </View>
           </View>

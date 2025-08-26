@@ -58,10 +58,10 @@ const GuestbookScreen: React.FC<GuestbookScreenProps> = ({
   const [showMenuModal, setShowMenuModal] = useState(false);
   const [selectedComment, setSelectedComment] =
     useState<GuestBookThreadResponse | null>(null);
-  const [_isLoading, setIsLoading] = useState(true);
-  const [_guestBookCount, setGuestBookCount] = useState(0);
-  const [_cursorId, setCursorId] = useState<number | undefined>();
-  const [_hasMore, setHasMore] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [guestBookCount, setGuestBookCount] = useState(0);
+  const [cursorId, setCursorId] = useState<number | undefined>();
+  const [hasMore, setHasMore] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
   const isMyGuestbook = currentUserId !== null && userId === currentUserId;
@@ -391,9 +391,53 @@ const GuestbookScreen: React.FC<GuestbookScreenProps> = ({
       </View>
 
       {/* 댓글 목록 */}
-      <ScrollView style={guestbookStyles.commentsContainer}>
-        {comments.map(renderComment)}
-      </ScrollView>
+      {isLoading && comments.length === 0 ? (
+        <View style={guestbookStyles.loadingContainer}>
+          <Text style={guestbookStyles.loadingText}>
+            방명록을 불러오는 중...
+          </Text>
+        </View>
+      ) : (
+        <ScrollView
+          style={guestbookStyles.commentsContainer}
+          onScroll={({nativeEvent}) => {
+            const {layoutMeasurement, contentOffset, contentSize} = nativeEvent;
+            const paddingToBottom = 20;
+            if (
+              layoutMeasurement.height + contentOffset.y >=
+                contentSize.height - paddingToBottom &&
+              hasMore &&
+              !isLoading
+            ) {
+              loadGuestBooks(cursorId);
+            }
+          }}
+          scrollEventThrottle={400}>
+          {comments.length === 0 ? (
+            <View style={guestbookStyles.emptyContainer}>
+              <Text style={guestbookStyles.emptyText}>
+                아직 방명록이 없습니다.{'\n'}첫 번째 방명록을 남겨보세요!
+              </Text>
+            </View>
+          ) : (
+            <>
+              {comments.map(renderComment)}
+              {isLoading && comments.length > 0 && (
+                <View style={guestbookStyles.loadingContainer}>
+                  <Text style={guestbookStyles.loadingText}>로딩 중...</Text>
+                </View>
+              )}
+              {!hasMore && comments.length > 0 && (
+                <View style={guestbookStyles.endContainer}>
+                  <Text style={guestbookStyles.endText}>
+                    모든 방명록을 불러왔습니다.
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
+        </ScrollView>
+      )}
 
       {/* 댓글 작성 영역 */}
       <View style={guestbookStyles.inputContainer}>

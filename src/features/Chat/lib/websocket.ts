@@ -47,6 +47,7 @@ class WebSocketService {
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private groupChatRoomSubscriptions = new Map<number, any>(); // 그룹 채팅방 구독 관리
+  private dmChatRoomSubscriptions = new Map<number, any>(); // DM 채팅방 구독 관리
 
   constructor() {
     // WebSocket 서비스 초기화
@@ -70,6 +71,8 @@ class WebSocketService {
       const wsUrl = token
         ? `${config.API_URL}/ws?token=${encodeURIComponent(token)}`
         : `${config.API_URL}/ws`;
+
+      console.log('[WebSocketService] WebSocket 연결 URL:', wsUrl);
 
       this.client = new Client({
         webSocketFactory: () => {
@@ -100,19 +103,13 @@ class WebSocketService {
         this.setStatus('connected');
         this.reconnectAttempts = 0;
 
-        // DM 메시지 구독
-        const subscriptionPath = `/queue/dm/${userId}`;
-        this.client?.subscribe(subscriptionPath, (message: IMessage) => {
-          try {
-            const dmMessage: DmMessageResponse = JSON.parse(message.body);
-            this.messageListener?.(dmMessage);
-          } catch (error) {
-            console.error('[WebSocketService] 메시지 파싱 에러:', error);
-          }
-        });
+        // DM 메시지 구독은 이제 각 채팅방별로 개별 구독
+        console.log(
+          '[WebSocketService] DM 메시지 구독은 각 채팅방별로 개별 구독합니다.',
+        );
 
         // 채팅방 리스트 업데이트 구독
-        const chatRoomListUpdatePath = `/queue/chatroom-list-update`;
+        const chatRoomListUpdatePath = `/user/queue/chatroom-list-update`;
         this.client?.subscribe(chatRoomListUpdatePath, (message: IMessage) => {
           try {
             const update: ChatRoomListUpdateDto = JSON.parse(message.body);
@@ -242,6 +239,9 @@ class WebSocketService {
     // 모든 그룹 채팅방 구독 해제
     this.unsubscribeFromAllGroupChatRooms();
 
+    // 모든 DM 채팅방 구독 해제
+    this.unsubscribeFromAllDmChatRooms();
+
     if (this.client) {
       this.client.deactivate();
       this.client = null;
@@ -352,6 +352,82 @@ class WebSocketService {
     this.groupChatRoomSubscriptions.clear();
   }
 
+  // DM 채팅방 구독
+  subscribeToDmChatRoom(dmChatRoomId: number): boolean {
+    if (!this.client?.connected) {
+      console.error('[WebSocketService] WebSocket이 연결되지 않음');
+      return false;
+    }
+
+    // 이미 구독 중인지 확인
+    if (this.dmChatRoomSubscriptions.has(dmChatRoomId)) {
+      console.log(`[WebSocketService] DM 채팅방 ${dmChatRoomId} 이미 구독 중`);
+      return true;
+    }
+
+    try {
+      const subscriptionPath = `/topic/dm/${dmChatRoomId}`;
+      const subscription = this.client.subscribe(
+        subscriptionPath,
+        (message: IMessage) => {
+          try {
+            const dmMessage: DmMessageResponse = JSON.parse(message.body);
+            this.messageListener?.(dmMessage);
+          } catch (error) {
+            console.error('[WebSocketService] DM 메시지 파싱 에러:', error);
+          }
+        },
+      );
+
+      this.dmChatRoomSubscriptions.set(dmChatRoomId, subscription);
+      console.log(`[WebSocketService] DM 채팅방 ${dmChatRoomId} 구독 완료`);
+      return true;
+    } catch (error) {
+      console.error(
+        `[WebSocketService] DM 채팅방 ${dmChatRoomId} 구독 실패:`,
+        error,
+      );
+      return false;
+    }
+  }
+
+  // DM 채팅방 구독 해제
+  unsubscribeFromDmChatRoom(dmChatRoomId: number): void {
+    const subscription = this.dmChatRoomSubscriptions.get(dmChatRoomId);
+    if (subscription) {
+      try {
+        subscription.unsubscribe();
+        this.dmChatRoomSubscriptions.delete(dmChatRoomId);
+        console.log(
+          `[WebSocketService] DM 채팅방 ${dmChatRoomId} 구독 해제 완료`,
+        );
+      } catch (error) {
+        console.error(
+          `[WebSocketService] DM 채팅방 ${dmChatRoomId} 구독 해제 실패:`,
+          error,
+        );
+      }
+    }
+  }
+
+  // 모든 DM 채팅방 구독 해제
+  unsubscribeFromAllDmChatRooms(): void {
+    this.dmChatRoomSubscriptions.forEach((subscription, dmChatRoomId) => {
+      try {
+        subscription.unsubscribe();
+        console.log(
+          `[WebSocketService] DM 채팅방 ${dmChatRoomId} 구독 해제 완료`,
+        );
+      } catch (error) {
+        console.error(
+          `[WebSocketService] DM 채팅방 ${dmChatRoomId} 구독 해제 실패:`,
+          error,
+        );
+      }
+    });
+    this.dmChatRoomSubscriptions.clear();
+  }
+
   // DM 메시지 읽음 처리
   sendDmReadMessage(dmChatRoomId: number, receiverId: number): void {
     if (!this.client?.connected) {
@@ -415,6 +491,37 @@ class WebSocketService {
       this.status = status;
       this.statusChangeListener?.(status);
     }
+  }
+
+  // WebSocket 연결 테스트 함수
+  async testConnection(): Promise<boolean> {
+    console.log('[WebSocketService] 연결 테스트 시작');
+
+    if (!this.userId) {
+      console.error('[WebSocketService] 사용자 ID가 없습니다.');
+      return false;
+    }
+
+    try {
+      const connected = await this.connectWebSocket(this.userId);
+      if (connected) {
+        console.log('[WebSocketService] 연결 테스트 성공');
+        return true;
+      } else {
+        console.error('[WebSocketService] 연결 테스트 실패');
+        return false;
+      }
+    } catch (error) {
+      console.error('[WebSocketService] 연결 테스트 중 오류:', error);
+      return false;
+    }
+  }
+
+  // 연결 상태 정보 출력
+  getConnectionInfo(): string {
+    return `Status: ${this.status}, Connected: ${this.isConnected()}, UserId: ${
+      this.userId
+    }`;
   }
 }
 
