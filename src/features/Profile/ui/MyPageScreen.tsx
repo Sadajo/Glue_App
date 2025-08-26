@@ -289,7 +289,7 @@ export const MyPageScreen = () => {
                   ? getLanguageLevelText(myPageInfo.mainLanguageLevel, t)
                   : t('profile.notSet')
               }
-              onEdit={() => navigation.navigate('ProfileEdit')}
+              onEdit={() => navigation.navigate('MyLanguageEdit')}
             />
             <LanguageCard
               title={t('profile.exchangeLanguage')}
@@ -303,7 +303,7 @@ export const MyPageScreen = () => {
                   ? getLanguageLevelText(myPageInfo.learningLanguageLevel, t)
                   : t('profile.notSet')
               }
-              onEdit={() => navigation.navigate('ProfileEdit')}
+              onEdit={() => navigation.navigate('ExchangeLanguageEdit')}
             />
           </View>
 

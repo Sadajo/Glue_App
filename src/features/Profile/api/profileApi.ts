@@ -690,3 +690,68 @@ export const getMyMeetings = async (): Promise<
     throw error;
   }
 };
+
+// 언어 설정 API 요청 타입
+export interface UpdateLanguageRequest {
+  language: number;
+  languageLevel: number;
+}
+
+// 언어 설정 API 함수들
+export const updateMainLanguage = async (request: UpdateLanguageRequest) => {
+  try {
+    const token = await secureStorage.getToken();
+    console.log('updateMainLanguage API 호출:', {
+      url: `${config.API_URL}/api/users/main-language`,
+      request,
+      token: token ? '토큰 있음' : '토큰 없음',
+    });
+
+    const response = await axios.put(
+      `${config.API_URL}/api/users/main-language`,
+      request,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      },
+    );
+
+    console.log('updateMainLanguage API 응답:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('updateMainLanguage API 에러:', error);
+    throw error;
+  }
+};
+
+export const updateLearningLanguage = async (
+  request: UpdateLanguageRequest,
+) => {
+  try {
+    const token = await secureStorage.getToken();
+    console.log('updateLearningLanguage API 호출:', {
+      url: `${config.API_URL}/api/users/learning-language`,
+      request,
+      token: token ? '토큰 있음' : '토큰 없음',
+    });
+
+    const response = await axios.put(
+      `${config.API_URL}/api/users/learning-language`,
+      request,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      },
+    );
+
+    console.log('updateLearningLanguage API 응답:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('updateLearningLanguage API 에러:', error);
+    throw error;
+  }
+};

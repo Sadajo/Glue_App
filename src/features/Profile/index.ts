@@ -12,6 +12,8 @@ export {MyParticipatingMeetingsScreen} from './ui/MyParticipatingMeetingsScreen'
 export {default as UserProfileDetail} from './ui/UserProfileDetail';
 export {default as GuestbookScreen} from './ui/GuestbookScreen';
 export {default as DescriptionEditScreen} from './ui/DescriptionEditScreen';
+export {default as MyLanguageEditScreen} from './ui/MyLanguageEditScreen';
+export {default as ExchangeLanguageEditScreen} from './ui/ExchangeLanguageEditScreen';
 
 // 새로운 사용자별 화면들
 export {UserGroupHistoryScreen} from './ui/UserGroupHistoryScreen';

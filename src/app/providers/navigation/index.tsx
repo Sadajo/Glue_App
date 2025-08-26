@@ -40,6 +40,8 @@ import {
   UserProfileDetail,
   GuestbookScreen,
   DescriptionEditScreen,
+  MyLanguageEditScreen,
+  ExchangeLanguageEditScreen,
   UserGroupHistoryScreen,
   UserLikedGroupsScreen,
   UserParticipatingMeetingsScreen,
@@ -386,6 +388,20 @@ const MainNavigator = () => (
     <MainStack.Screen
       name="DescriptionEdit"
       component={DescriptionEditScreen}
+      options={{
+        headerShown: false,
+      }}
+    />
+    <MainStack.Screen
+      name="MyLanguageEdit"
+      component={MyLanguageEditScreen}
+      options={{
+        headerShown: false,
+      }}
+    />
+    <MainStack.Screen
+      name="ExchangeLanguageEdit"
+      component={ExchangeLanguageEditScreen}
       options={{
         headerShown: false,
       }}
