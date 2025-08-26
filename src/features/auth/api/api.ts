@@ -8,6 +8,25 @@ export const apiClient = axios.create({
   timeout: config.API_TIMEOUT,
 });
 
+// 요청 인터셉터: 인증 토큰 추가
+apiClient.interceptors.request.use(
+  async config => {
+    try {
+      const {secureStorage} = await import('@/shared/lib/security');
+      const token = await secureStorage.getToken();
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch (error) {
+      console.error('토큰 가져오기 실패:', error);
+    }
+    return config;
+  },
+  error => {
+    return Promise.reject(error);
+  },
+);
+
 // 서버 응답에 맞게 수정된 응답 인터페이스
 export interface ApiResponseDto<T> {
   httpStatus: string;
