@@ -370,7 +370,6 @@ const MainNavigator = () => (
         header: PrivacySettingsHeader,
       }}
     />
-
   </MainStack.Navigator>
 );
 
@@ -457,6 +456,14 @@ export const AppNavigator = () => {
         options={{
           headerShown: true,
           header: MyParticipatingMeetingsHeader,
+        }}
+      />
+      <RootStack.Screen
+        name="Guestbook"
+        component={GuestbookScreen as any}
+        options={{
+          headerShown: false,
+          header: GuestbookHeader,
         }}
       />
     </RootStack.Navigator>
