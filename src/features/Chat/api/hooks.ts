@@ -87,7 +87,15 @@ export const useGroupChatRooms = (cursorId?: number, pageSize: number = 10) => {
     {
       staleTime: 1000 * 60 * 5, // 5분 동안 데이터 신선한 상태 유지
       refetchOnWindowFocus: true, // 창이 포커스될 때 다시 가져오기
-      retry: 1, // 실패 시 1번 재시도
+      retry: (failureCount, error) => {
+        // 서버 오류(500)의 경우 재시도하지 않음
+        if (error instanceof Error && error.message.includes('서버 오류')) {
+          return false;
+        }
+        // 최대 2번까지 재시도
+        return failureCount < 2;
+      },
+      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000), // 지수 백오프
     },
   );
 };

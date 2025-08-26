@@ -695,6 +695,14 @@ export const getGroupChatRooms = async (
       throw new Error('인증 토큰이 없습니다. 로그인이 필요합니다.');
     }
 
+    // 토큰 유효성 검사
+    const isTokenValid = await secureStorage.isTokenValid();
+    console.log('[API 요청] 토큰 유효성:', isTokenValid);
+
+    if (!isTokenValid) {
+      throw new Error('토큰이 만료되었습니다. 다시 로그인해주세요.');
+    }
+
     // 쿼리 파라미터 설정
     const params: any = {pageSize};
     if (cursorId !== undefined) {
@@ -702,11 +710,13 @@ export const getGroupChatRooms = async (
     }
 
     console.log('[API 요청] 헤더 설정:', `Bearer ${token.substring(0, 20)}...`);
+    console.log('[API 요청] 쿼리 파라미터:', params);
 
     // API 요청 보내기
     const response = await apiClient.get(endpoint, {
       headers: {
         Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
       },
       params,
     });
@@ -732,13 +742,26 @@ export const getGroupChatRooms = async (
       const status = error.response.status;
       console.log(`[API 오류] HTTP 상태: ${status}`);
       console.log(`[API 오류] 응답 데이터:`, error.response.data);
+      console.log(`[API 오류] 응답 헤더:`, error.response.headers);
+      console.log(`[API 오류] 요청 URL:`, error.config?.url);
+      console.log(`[API 오류] 요청 메서드:`, error.config?.method);
 
       if (status === 401) {
         throw new Error('인증이 필요합니다. 다시 로그인해주세요.');
       } else if (status === 403) {
         throw new Error('그룹 채팅방 목록을 조회할 권한이 없습니다.');
+      } else if (status === 404) {
+        throw new Error('그룹 채팅방 목록을 찾을 수 없습니다.');
       } else if (status >= 500) {
-        throw new Error('서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+        // 서버 오류의 경우 더 구체적인 메시지 제공
+        const serverMessage = error.response.data?.message;
+        if (serverMessage && serverMessage !== 'Internal server error') {
+          throw new Error(`서버 오류: ${serverMessage}`);
+        } else {
+          throw new Error(
+            '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
+          );
+        }
       }
 
       // 기본 에러 메시지

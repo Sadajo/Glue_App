@@ -265,13 +265,23 @@ const ChatRoomListScreen: React.FC<ChatRoomListScreenProps> = ({
   // 에러 발생시 토스트 표시
   useEffect(() => {
     if (isHostedError && hostedError) {
+      console.log('[ChatRoomListScreen] 호스트 DM 에러:', hostedError);
       toastService.error('오류', hostedError.message);
     }
     if (isParticipatedError && participatedError) {
+      console.log('[ChatRoomListScreen] 참여자 DM 에러:', participatedError);
       toastService.error('오류', participatedError.message);
     }
     if (isGroupChatRoomsError && groupChatRoomsError) {
-      toastService.error('오류', groupChatRoomsError.message);
+      console.log(
+        '[ChatRoomListScreen] 그룹 채팅방 에러:',
+        groupChatRoomsError,
+      );
+      // 서버 오류인 경우 더 친화적인 메시지 표시
+      const errorMessage = groupChatRoomsError.message.includes('서버 오류')
+        ? '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
+        : groupChatRoomsError.message;
+      toastService.error('오류', errorMessage);
     }
   }, [
     isHostedError,
@@ -603,7 +613,20 @@ const ChatRoomListScreen: React.FC<ChatRoomListScreenProps> = ({
           // 모임톡 목록 (API에서 가져온 데이터)
           !isLoading && (
             <View>
-              {groupChatRooms.length > 0 ? (
+              {isGroupChatRoomsError ? (
+                // 에러 상태일 때 재시도 버튼 표시
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>
+                    모임톡 목록을 불러오는데 실패했습니다.
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.retryButton}
+                    onPress={() => refetchGroupChatRooms()}
+                    activeOpacity={0.7}>
+                    <Text style={styles.retryButtonText}>다시 시도</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : groupChatRooms.length > 0 ? (
                 groupChatRooms.map(room => renderGroupChatRoomItem(room))
               ) : (
                 <View style={styles.emptyContainer}>

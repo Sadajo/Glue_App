@@ -77,4 +77,28 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666666',
   },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 100,
+    paddingHorizontal: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#FF6B6B',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: '#1CBFDC',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
 });

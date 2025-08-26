@@ -15,7 +15,7 @@ import {GroupItemCard} from './components/GroupItemCard';
 import {FloatingButton} from './components/FloatingButton';
 import {commonStyles} from './styles/groupStyles';
 import {Text} from '../../../shared/ui/typography/Text';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import GroupListHeader from './components/GroupListHeader';
 import {useInfinitePosts} from '../api/hooks';
 import {PostItem} from '../api/api';
@@ -98,6 +98,14 @@ const GroupList: React.FC = () => {
 
   // 모든 페이지의 게시글을 하나의 배열로 병합
   const allPosts = data?.pages.flatMap(page => (page as any).data.posts) || [];
+
+  // 화면이 포커스될 때 자동 새로고침 (글 작성 후 돌아올 때)
+  useFocusEffect(
+    useCallback(() => {
+      // 화면이 포커스될 때마다 데이터 새로고침
+      refetch();
+    }, [refetch]),
+  );
 
   // 데이터 로딩 완료 시 페이드인 애니메이션
   useEffect(() => {
@@ -270,18 +278,18 @@ const GroupList: React.FC = () => {
                   tintColor={'#1CBFDC'}
                 />
               }
-            ListEmptyComponent={() => (
-              <View style={styles.emptyContainer}>
-                <Text>{t('group.search.noResults')}</Text>
-              </View>
-            )}
-            ListFooterComponent={() =>
-              isFetchingNextPage ? (
-                <View style={styles.loadingFooter}>
-                  <ActivityIndicator size="small" color="#1CBFDC" />
+              ListEmptyComponent={() => (
+                <View style={styles.emptyContainer}>
+                  <Text>{t('group.search.noResults')}</Text>
                 </View>
-              ) : null
-            }
+              )}
+              ListFooterComponent={() =>
+                isFetchingNextPage ? (
+                  <View style={styles.loadingFooter}>
+                    <ActivityIndicator size="small" color="#1CBFDC" />
+                  </View>
+                ) : null
+              }
             />
           </Animated.View>
         )}

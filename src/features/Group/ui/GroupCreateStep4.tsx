@@ -13,6 +13,7 @@ import {
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {useTranslation} from 'react-i18next';
+import {useQueryClient} from '@tanstack/react-query';
 import DateTimePicker, {
   DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
@@ -53,6 +54,7 @@ const GroupCreateStep4 = () => {
   const {t} = useTranslation();
   const params = route.params as RouteParams;
   const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
 
   const [title, setTitle] = useState<string>('');
   // 현재 시간 + 3시간을 최소 시간으로 설정
@@ -164,6 +166,11 @@ const GroupCreateStep4 = () => {
       onSuccess: response => {
         console.log('모임 게시글 생성 성공:', response.data);
 
+        // 게시글 목록 캐시 무효화하여 자동 새로고침 트리거
+        queryClient.invalidateQueries({
+          queryKey: ['posts'],
+        });
+
         // 게시글 ID와 모임 ID 추출
         const postId = response.data?.postId;
         const meetingId = response.data?.postId;
@@ -243,6 +250,11 @@ const GroupCreateStep4 = () => {
             t('group.create.success.title'),
             t('group.create.success.message'),
           );
+
+          // 게시글 목록 캐시 무효화
+          queryClient.invalidateQueries({
+            queryKey: ['posts'],
+          });
 
           navigation.reset({
             index: 0,
@@ -488,7 +500,11 @@ const GroupCreateStep4 = () => {
         </View>
       </ScrollView>
 
-      <View style={[styles.bottomContainer, Platform.OS === 'android' && {paddingBottom: insets.bottom + 20}]}>
+      <View
+        style={[
+          styles.bottomContainer,
+          Platform.OS === 'android' && {paddingBottom: insets.bottom + 20},
+        ]}>
         <TouchableOpacity
           style={[
             styles.completeButton,
