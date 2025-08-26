@@ -50,6 +50,7 @@ import {
   TermsOfServiceScreen,
   PrivacyPolicyScreen,
   OpenSourceLicenseScreen,
+  NoticeDetailScreen,
 } from '@features/Settings';
 // 인증 화면 임포트
 import {
@@ -368,6 +369,13 @@ const MainNavigator = () => (
     <MainStack.Screen
       name="OpenSourceLicense"
       component={OpenSourceLicenseScreen}
+      options={{
+        headerShown: false,
+      }}
+    />
+    <MainStack.Screen
+      name="NoticeDetail"
+      component={NoticeDetailScreen}
       options={{
         headerShown: false,
       }}

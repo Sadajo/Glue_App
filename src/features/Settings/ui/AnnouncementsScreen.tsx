@@ -1,7 +1,6 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState} from 'react';
 import {
   SafeAreaView,
-  ScrollView,
   View,
   TouchableOpacity,
   FlatList,
@@ -10,127 +9,66 @@ import {
 import {Text} from '@shared/ui/typography/Text';
 import {useTranslation} from 'react-i18next';
 import {ChevronLeft} from '@shared/assets/images';
+import {useNotices} from '../api/hooks';
 import Toast from 'react-native-toast-message';
 
-interface Announcement {
-  id: string;
-  title: string;
-  content: string;
-  date: string;
-  isImportant: boolean;
-}
+import {NoticeDto} from '../api/noticeApi';
 
 const AnnouncementsScreen = ({navigation}: any) => {
   const {t} = useTranslation();
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [selectedAnnouncement, setSelectedAnnouncement] =
-    useState<Announcement | null>(null);
-  const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(true);
 
-  // 더미 데이터
-  const dummyAnnouncements: Announcement[] = [
-    {
-      id: '1',
-      title: 'Glue 앱 업데이트 안내 (v1.0.0)',
-      content:
-        '안녕하세요! Glue 앱이 새로운 버전으로 업데이트되었습니다.\n\n주요 변경사항:\n• 새로운 채팅 기능 추가\n• UI/UX 개선\n• 성능 최적화\n• 버그 수정\n\n더 나은 서비스를 위해 계속 노력하겠습니다. 감사합니다!',
-      date: '2024-01-15',
-      isImportant: true,
-    },
-    {
-      id: '2',
-      title: '서비스 점검 안내',
-      content:
-        '2024년 1월 20일 새벽 2시부터 4시까지 서비스 점검이 예정되어 있습니다.\n\n점검 시간 동안에는 서비스 이용이 제한될 수 있습니다.\n\n불편을 드려 죄송합니다.',
-      date: '2024-01-10',
-      isImportant: true,
-    },
-    {
-      id: '3',
-      title: '개인정보 처리방침 개정 안내',
-      content:
-        '개인정보 처리방침이 개정되었습니다.\n\n주요 변경사항:\n• 개인정보 수집 및 이용 목적 명시\n• 개인정보 보유 및 이용기간 변경\n• 개인정보 제3자 제공 관련 사항 추가\n\n자세한 내용은 설정 > 개인정보 처리방침에서 확인하실 수 있습니다.',
-      date: '2024-01-05',
-      isImportant: false,
-    },
-    {
-      id: '4',
-      title: '신규 기능: 그룹 채팅방',
-      content:
-        '새로운 그룹 채팅방 기능이 추가되었습니다!\n\n• 최대 50명까지 참여 가능\n• 그룹 프로필 설정\n• 그룹 관리자 기능\n• 파일 공유 기능\n\n지금 바로 새로운 그룹을 만들어보세요!',
-      date: '2024-01-01',
-      isImportant: false,
-    },
-  ];
-
-  useEffect(() => {
-    fetchAnnouncements();
-  }, []);
-
-  const fetchAnnouncements = async () => {
-    try {
-      setLoading(true);
-      // TODO: 실제 API 호출로 변경
-      await new Promise(resolve => setTimeout(resolve, 1000)); // 로딩 시뮬레이션
-      setAnnouncements(dummyAnnouncements);
-    } catch (error) {
-      Toast.show({
-        type: 'error',
-        text1: '공지사항을 불러오는데 실패했습니다.',
-        position: 'bottom',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  // 공지사항 목록 조회 훅 사용
+  const {data: response, isLoading, isError, error, refetch} = useNotices();
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchAnnouncements();
+    await refetch();
     setRefreshing(false);
   };
 
-  const handleAnnouncementPress = (announcement: Announcement) => {
-    setSelectedAnnouncement(announcement);
-    setIsDetailModalVisible(true);
+  const handleAnnouncementPress = (notice: NoticeDto) => {
+    navigation.navigate('NoticeDetail', {noticeId: notice.noticeId});
   };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
     });
   };
 
-  const renderAnnouncementItem = ({item}: {item: Announcement}) => (
+  const renderAnnouncementItem = ({item}: {item: NoticeDto}) => (
     <TouchableOpacity
-      style={[
-        styles.announcementItem,
-        item.isImportant && styles.importantItem,
-      ]}
+      style={styles.announcementItem}
       onPress={() => handleAnnouncementPress(item)}>
-      <View style={styles.itemHeader}>
-        <Text
-          variant="body1"
-          weight="semiBold"
-          style={[styles.itemTitle, item.isImportant && styles.importantTitle]}>
-          {item.title}
-        </Text>
-        {item.isImportant && (
-          <View style={styles.importantBadge}>
-            <Text variant="caption" weight="bold" style={styles.importantText}>
-              중요
+      <View style={styles.itemContent}>
+        <View style={styles.itemLeft}>
+          <Text variant="body1" weight="semiBold" style={styles.itemTitle}>
+            {item.title}
+          </Text>
+          <Text
+            variant="body2"
+            style={styles.itemDescription}
+            numberOfLines={2}>
+            {item.content.split('\n')[0]}
+          </Text>
+          <View style={styles.itemMeta}>
+            <Text variant="caption" style={styles.itemLikes}>
+              ♥ 20
+            </Text>
+            <Text variant="caption" style={styles.itemDate}>
+              {formatDate(item.createdAt)}
             </Text>
           </View>
-        )}
+        </View>
+        <View style={styles.itemRight}>
+          <View style={styles.thumbnail}>
+            <Text style={styles.thumbnailText}>😊</Text>
+          </View>
+        </View>
       </View>
-      <Text variant="caption" style={styles.itemDate}>
-        {formatDate(item.date)}
-      </Text>
     </TouchableOpacity>
   );
 
@@ -148,17 +86,23 @@ const AnnouncementsScreen = ({navigation}: any) => {
         <View style={{width: 40}} />
       </View>
 
-      {loading ? (
+      {isLoading ? (
         <View style={styles.loadingContainer}>
           <Text variant="body1" style={styles.loadingText}>
             공지사항을 불러오는 중...
           </Text>
         </View>
+      ) : isError ? (
+        <View style={styles.errorContainer}>
+          <Text variant="body1" style={styles.errorText}>
+            {error?.message || '공지사항을 불러오는데 실패했습니다.'}
+          </Text>
+        </View>
       ) : (
         <FlatList
-          data={announcements}
+          data={response?.data || []}
           renderItem={renderAnnouncementItem}
-          keyExtractor={item => item.id}
+          keyExtractor={item => item.noticeId.toString()}
           style={styles.list}
           contentContainerStyle={styles.listContent}
           refreshControl={
@@ -172,38 +116,6 @@ const AnnouncementsScreen = ({navigation}: any) => {
             </View>
           }
         />
-      )}
-
-      {/* 공지사항 상세 모달 */}
-      {selectedAnnouncement && (
-        <View
-          style={[
-            styles.modalOverlay,
-            {display: isDetailModalVisible ? 'flex' : 'none'},
-          ]}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text variant="h6" weight="semiBold" style={styles.modalTitle}>
-                {selectedAnnouncement.title}
-              </Text>
-              <TouchableOpacity
-                onPress={() => setIsDetailModalVisible(false)}
-                style={styles.closeButton}>
-                <Text variant="h6" weight="bold">
-                  ×
-                </Text>
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={styles.modalBody}>
-              <Text variant="caption" style={styles.modalDate}>
-                {formatDate(selectedAnnouncement.date)}
-              </Text>
-              <Text variant="body1" style={styles.modalContentText}>
-                {selectedAnnouncement.content}
-              </Text>
-            </ScrollView>
-          </View>
-        </View>
       )}
     </SafeAreaView>
   );
@@ -231,38 +143,52 @@ const styles = {
   },
   announcementItem: {
     paddingVertical: 16,
+    paddingHorizontal: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
   },
-  importantItem: {
-    backgroundColor: '#FFF8E1',
-  },
-  itemHeader: {
+  itemContent: {
     flexDirection: 'row' as const,
-    justifyContent: 'space-between' as const,
-    alignItems: 'flex-start' as const,
-    marginBottom: 8,
+    alignItems: 'center' as const,
+  },
+  itemLeft: {
+    flex: 1,
+    marginRight: 16,
+  },
+  itemRight: {
+    width: 60,
+    height: 60,
   },
   itemTitle: {
-    flex: 1,
     color: '#333333',
+    marginBottom: 4,
   },
-  importantTitle: {
-    color: '#D32F2F',
+  itemDescription: {
+    color: '#666666',
+    marginBottom: 8,
+    lineHeight: 18,
   },
-  importantBadge: {
-    backgroundColor: '#D32F2F',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginLeft: 8,
+  itemMeta: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
   },
-  importantText: {
-    color: '#FFFFFF',
-    fontSize: 10,
+  itemLikes: {
+    color: '#999999',
+    marginRight: 8,
   },
   itemDate: {
     color: '#999999',
+  },
+  thumbnail: {
+    width: 60,
+    height: 60,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+  },
+  thumbnailText: {
+    fontSize: 24,
   },
   loadingContainer: {
     flex: 1,
@@ -281,51 +207,15 @@ const styles = {
   emptyText: {
     color: '#999999',
   },
-  modalOverlay: {
-    position: 'absolute' as const,
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  errorContainer: {
+    flex: 1,
     justifyContent: 'center' as const,
     alignItems: 'center' as const,
-    zIndex: 1000,
+    padding: 20,
   },
-  modalContent: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    marginHorizontal: 20,
-    maxHeight: '80%',
-    width: '90%',
-  },
-  modalHeader: {
-    flexDirection: 'row' as const,
-    justifyContent: 'space-between' as const,
-    alignItems: 'center' as const,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  modalTitle: {
-    flex: 1,
-    color: '#333333',
-  },
-  closeButton: {
-    padding: 4,
-  },
-  modalBody: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  modalDate: {
-    color: '#999999',
-    marginBottom: 16,
-  },
-  modalContentText: {
-    color: '#333333',
-    lineHeight: 24,
+  errorText: {
+    color: '#e74c3c',
+    textAlign: 'center' as const,
   },
 };
 

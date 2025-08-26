@@ -4,6 +4,7 @@ import AnnouncementsScreen from './ui/AnnouncementsScreen';
 import TermsOfServiceScreen from './ui/TermsOfServiceScreen';
 import PrivacyPolicyScreen from './ui/PrivacyPolicyScreen';
 import OpenSourceLicenseScreen from './ui/OpenSourceLicenseScreen';
+import NoticeDetailScreen from './ui/NoticeDetailScreen';
 
 export {
   SettingsScreen,
@@ -12,4 +13,5 @@ export {
   TermsOfServiceScreen,
   PrivacyPolicyScreen,
   OpenSourceLicenseScreen,
+  NoticeDetailScreen,
 };
