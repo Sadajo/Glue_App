@@ -67,6 +67,48 @@ const GroupSearch: React.FC<GroupSearchProps> = ({navigation}) => {
   const [hasNext, setHasNext] = useState(false);
   const [lastPostId, setLastPostId] = useState<number | null>(null);
 
+  // 카테고리 ID에서 텍스트로 변환
+  const getCategoryTextFromId = (categoryId: number): string => {
+    switch (categoryId) {
+      case 1:
+        return t('group.categories.study');
+      case 2:
+        return t('group.categories.social');
+      case 3:
+        return t('group.categories.help');
+      default:
+        return '';
+    }
+  };
+
+  // 카테고리 ID에서 색상으로 변환
+  const getCategoryColorFromId = (categoryId: number): string => {
+    switch (categoryId) {
+      case 1: // 공부
+        return '#DEE9FC';
+      case 2: // 친목
+        return '#E1FBE8';
+      case 3: // 도움
+        return '#FFF1BB';
+      default:
+        return '#E3F2FD';
+    }
+  };
+
+  // 카테고리 ID에서 텍스트 색상으로 변환
+  const getCategoryTextColorFromId = (categoryId: number): string => {
+    switch (categoryId) {
+      case 1: // 공부
+        return '#263FA9';
+      case 2: // 친목
+        return '#306339';
+      case 3: // 도움
+        return '#A47C5E';
+      default:
+        return '#1976D2';
+    }
+  };
+
   // 컴포넌트 마운트 시 최근 검색어 로드
   useEffect(() => {
     loadRecentSearches();
@@ -148,9 +190,9 @@ const GroupSearch: React.FC<GroupSearchProps> = ({navigation}) => {
           id: post.postId.toString(),
           title: post.title,
           description: post.content,
-          category: post.categoryId.toString(), // 카테고리 매핑 필요
-          categoryColor: '#E3F2FD', // 기본 카테고리 색상
-          categoryTextColor: '#1976D2', // 기본 카테고리 텍스트 색상
+          category: getCategoryTextFromId(post.categoryId), // 카테고리 ID를 텍스트로 변환
+          categoryColor: getCategoryColorFromId(post.categoryId), // 카테고리별 배경색
+          categoryTextColor: getCategoryTextColorFromId(post.categoryId), // 카테고리별 텍스트 색상
           likes: post.likeCount,
           viewCounts: post.viewCount,
           participants: `${post.currentParticipants}/${post.maxParticipants}`,
