@@ -43,7 +43,14 @@ import {
 } from '@features/Profile';
 
 // 설정 화면 임포트
-import {SettingsScreen} from '@features/Settings';
+import {
+  SettingsScreen,
+  InquiryScreen,
+  AnnouncementsScreen,
+  TermsOfServiceScreen,
+  PrivacyPolicyScreen,
+  OpenSourceLicenseScreen,
+} from '@features/Settings';
 // 인증 화면 임포트
 import {
   WelcomeScreen,
@@ -326,6 +333,41 @@ const MainNavigator = () => (
     <MainStack.Screen
       name="Settings"
       component={SettingsScreen}
+      options={{
+        headerShown: false,
+      }}
+    />
+    <MainStack.Screen
+      name="Inquiry"
+      component={InquiryScreen}
+      options={{
+        headerShown: false,
+      }}
+    />
+    <MainStack.Screen
+      name="Announcements"
+      component={AnnouncementsScreen}
+      options={{
+        headerShown: false,
+      }}
+    />
+    <MainStack.Screen
+      name="TermsOfService"
+      component={TermsOfServiceScreen}
+      options={{
+        headerShown: false,
+      }}
+    />
+    <MainStack.Screen
+      name="PrivacyPolicy"
+      component={PrivacyPolicyScreen}
+      options={{
+        headerShown: false,
+      }}
+    />
+    <MainStack.Screen
+      name="OpenSourceLicense"
+      component={OpenSourceLicenseScreen}
       options={{
         headerShown: false,
       }}

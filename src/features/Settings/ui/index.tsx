@@ -1,10 +1,5 @@
 import React, {useState} from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  View,
-  TouchableOpacity,
-} from 'react-native';
+import {SafeAreaView, ScrollView, View, TouchableOpacity} from 'react-native';
 import {Text} from '../../../shared/ui/typography/Text';
 import SettingsHeader from '../../../widgets/header/ui/SettingsHeader';
 import {useTranslation} from 'react-i18next';
@@ -17,11 +12,12 @@ import {logger} from '@/shared/lib/logger';
 import Toast from 'react-native-toast-message';
 import {useSignout} from '@/features/auth/api/hooks';
 
-const SettingsScreen = () => {
+const SettingsScreen = ({navigation}: any) => {
   const {t, i18n} = useTranslation();
   const [isLanguageModalVisible, setIsLanguageModalVisible] = useState(false);
   const [isLogoutModalVisible, setIsLogoutModalVisible] = useState(false);
-  const [isWithdrawalModalVisible, setIsWithdrawalModalVisible] = useState(false);
+  const [isWithdrawalModalVisible, setIsWithdrawalModalVisible] =
+    useState(false);
   const signoutMutation = useSignout();
 
   // 언어 옵션 생성
@@ -58,20 +54,20 @@ const SettingsScreen = () => {
   const performLogout = async () => {
     try {
       logger.info('로그아웃 시작');
-      
+
       // 토큰 삭제
       const success = await secureStorage.removeToken();
-      
+
       if (success) {
         logger.info('로그아웃 성공 - 토큰 삭제 완료');
-        
+
         // 성공 토스트 메시지
         Toast.show({
           type: 'success',
           text1: t('settings.logoutSuccess'),
           position: 'bottom',
         });
-        
+
         // 로그인 화면으로 이동
         navigateToAuth();
       } else {
@@ -79,7 +75,7 @@ const SettingsScreen = () => {
       }
     } catch (error) {
       logger.error('로그아웃 실패:', error);
-      
+
       // 실패 토스트 메시지
       Toast.show({
         type: 'error',
@@ -98,23 +94,23 @@ const SettingsScreen = () => {
   const performWithdrawal = async () => {
     try {
       logger.info('회원 탈퇴 시작');
-      
+
       // 회원 탈퇴 API 호출
-      const response = await signoutMutation.mutateAsync();
-      
+      const response = await signoutMutation.mutateAsync(undefined);
+
       if (response.success) {
         logger.info('회원 탈퇴 성공');
-        
+
         // 토큰 삭제
         await secureStorage.removeToken();
-        
+
         // 성공 토스트 메시지
         Toast.show({
           type: 'success',
           text1: t('settings.withdrawalSuccess'),
           position: 'bottom',
         });
-        
+
         // 로그인 화면으로 이동
         navigateToAuth();
       } else {
@@ -122,7 +118,7 @@ const SettingsScreen = () => {
       }
     } catch (error) {
       logger.error('회원 탈퇴 실패:', error);
-      
+
       // 실패 토스트 메시지
       Toast.show({
         type: 'error',
@@ -181,8 +177,7 @@ const SettingsScreen = () => {
           <TouchableOpacity
             style={styles.menuItem}
             onPress={() => {
-              // TODO: 문의하기 화면으로 이동
-              console.log(t('settings.inquiry') + ' 클릭');
+              navigation.navigate('Inquiry');
             }}>
             <Text variant="body1" weight="regular" style={styles.menuLabel}>
               {t('settings.inquiry')}
@@ -192,8 +187,7 @@ const SettingsScreen = () => {
           <TouchableOpacity
             style={styles.menuItem}
             onPress={() => {
-              // TODO: 공지사항 화면으로 이동
-              console.log(t('settings.announcements') + ' 클릭');
+              navigation.navigate('Announcements');
             }}>
             <Text variant="body1" weight="regular" style={styles.menuLabel}>
               {t('settings.announcements')}
@@ -203,8 +197,7 @@ const SettingsScreen = () => {
           <TouchableOpacity
             style={styles.menuItem}
             onPress={() => {
-              // TODO: 서비스 이용약관 화면으로 이동
-              console.log(t('settings.termsOfService') + ' 클릭');
+              navigation.navigate('TermsOfService');
             }}>
             <Text variant="body1" weight="regular" style={styles.menuLabel}>
               {t('settings.termsOfService')}
@@ -214,8 +207,7 @@ const SettingsScreen = () => {
           <TouchableOpacity
             style={styles.menuItem}
             onPress={() => {
-              // TODO: 개인정보 처리방침 화면으로 이동
-              console.log(t('settings.privacyPolicy') + ' 클릭');
+              navigation.navigate('PrivacyPolicy');
             }}>
             <Text variant="body1" weight="regular" style={styles.menuLabel}>
               {t('settings.privacyPolicy')}
@@ -225,8 +217,7 @@ const SettingsScreen = () => {
           <TouchableOpacity
             style={[styles.menuItem, styles.lastMenuItem]}
             onPress={() => {
-              // TODO: 오픈소스 라이선스 화면으로 이동
-              console.log(t('settings.openSourceLicense') + ' 클릭');
+              navigation.navigate('OpenSourceLicense');
             }}>
             <Text variant="body1" weight="regular" style={styles.menuLabel}>
               {t('settings.openSourceLicense')}
