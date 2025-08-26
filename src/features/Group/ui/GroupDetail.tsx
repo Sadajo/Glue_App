@@ -5,6 +5,8 @@ import {
   ScrollView,
   Image,
   ActivityIndicator,
+  FlatList,
+  Dimensions,
 } from 'react-native';
 import {GroupDetailProps} from '../model/types';
 import {commonStyles, navigationStyles} from './styles/groupStyles';
@@ -20,6 +22,7 @@ import {useGroupDetail, useCreateDmChatRoom, useReport} from '../api/hooks';
 import {useTranslation} from 'react-i18next';
 import {secureStorage} from '@shared/lib/security';
 import ReportModal from './components/ReportModal';
+import {colors} from '../../../app/styles/colors';
 
 /**
  * 모임 상세 화면 컴포넌트
@@ -31,6 +34,7 @@ const GroupDetail: React.FC<GroupDetailProps> = ({route, navigation}) => {
   const [isMyPost, setIsMyPost] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // 모임 상세 정보 조회 훅 사용
   const {
@@ -188,7 +192,7 @@ const GroupDetail: React.FC<GroupDetailProps> = ({route, navigation}) => {
         reasonId: reasonId,
       },
       {
-        onSuccess: (response) => {
+        onSuccess: response => {
           console.log('게시글 신고 성공:', response);
           toastService.success(
             t('group.detail.menu.reportModal.success'),
@@ -206,11 +210,8 @@ const GroupDetail: React.FC<GroupDetailProps> = ({route, navigation}) => {
           } else if (error.message.includes('존재하지 않는')) {
             errorMessage = '존재하지 않는 게시글입니다.';
           }
-          
-          toastService.error(
-            '신고 실패',
-            errorMessage,
-          );
+
+          toastService.error('신고 실패', errorMessage);
         },
       },
     );
@@ -251,8 +252,8 @@ const GroupDetail: React.FC<GroupDetailProps> = ({route, navigation}) => {
   // 데이터에서 필요한 정보 추출
   const {meeting, post} = response.data;
   const creator = meeting.creator;
-  const mainImageUrl =
-    post.postImageUrl && post.postImageUrl.length > 0 ? post.postImageUrl[0].imageUrl : null;
+  const imageUrls = post.postImageUrl?.map(img => img.imageUrl) || [];
+  const screenWidth = Dimensions.get('window').width;
 
   // 카테고리 ID가 있으면 번역된 텍스트로 변환
   const categoryText = meeting.categoryId
@@ -297,13 +298,57 @@ const GroupDetail: React.FC<GroupDetailProps> = ({route, navigation}) => {
           {post.content}
         </Text>
 
-        {/* 이미지 */}
-        {mainImageUrl && (
-          <Image
-            source={{uri: mainImageUrl}}
-            resizeMode={'stretch'}
-            style={groupDetailStyles.contentImage}
-          />
+        {/* 이미지 슬라이더 */}
+        {imageUrls.length > 0 && (
+          <View style={groupDetailStyles.imageContainer}>
+            <FlatList
+              data={imageUrls}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(item, index) => index.toString()}
+              onViewableItemsChanged={({viewableItems}) => {
+                if (viewableItems.length > 0) {
+                  setCurrentImageIndex(viewableItems[0].index || 0);
+                }
+              }}
+              viewabilityConfig={{
+                itemVisiblePercentThreshold: 50,
+              }}
+              renderItem={({item}) => (
+                <Image
+                  source={{uri: item}}
+                  resizeMode="cover"
+                  style={[
+                    groupDetailStyles.contentImage,
+                    {width: screenWidth - 38},
+                  ]}
+                />
+              )}
+            />
+            {/* 이미지 인디케이터 */}
+            {imageUrls.length > 1 && (
+              <View style={groupDetailStyles.indicatorContainer}>
+                {imageUrls.map((_, index) => (
+                  <View
+                    key={index}
+                    style={[
+                      groupDetailStyles.indicator,
+                      {
+                        backgroundColor:
+                          index === currentImageIndex
+                            ? colors.white
+                            : 'rgba(255, 255, 255, 0.5)', // 투명도 추가
+                        width: index === currentImageIndex ? 12 : 8,
+                        height: index === currentImageIndex ? 12 : 8,
+                        borderRadius: index === currentImageIndex ? 6 : 4,
+                      },
+                    ]}
+                  />
+                ))}
+              </View>
+            )}
+          </View>
         )}
 
         {/* 모임 정보 */}
@@ -318,9 +363,9 @@ const GroupDetail: React.FC<GroupDetailProps> = ({route, navigation}) => {
         />
 
         {/* 좋아요 정보 */}
-        <GroupLikes 
-          likeCount={post.likeCount} 
-          postId={post.postId} 
+        <GroupLikes
+          likeCount={post.likeCount}
+          postId={post.postId}
           isLiked={post.isLiked}
         />
 

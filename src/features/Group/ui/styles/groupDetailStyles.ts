@@ -115,6 +115,39 @@ export const groupDetailStyles = StyleSheet.create({
     marginBottom: 20,
   },
 
+  // 이미지 슬라이더 스타일
+  imageContainer: {
+    marginBottom: 20,
+    borderRadius: 8,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  indicatorContainer: {
+    position: 'absolute',
+    bottom: 40,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  indicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginHorizontal: 4,
+    opacity: 0.6,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+
   // 모임 정보 스타일
   infoContainer: {
     backgroundColor: '#FFFFFF',
