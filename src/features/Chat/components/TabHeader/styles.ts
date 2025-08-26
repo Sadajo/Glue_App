@@ -3,7 +3,7 @@ import {StyleSheet} from 'react-native';
 export const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    marginBottom: 3,
+    marginBottom: 15,
     marginLeft: 20,
     marginTop: 19,
   },
@@ -20,10 +20,11 @@ export const styles = StyleSheet.create({
   },
   tabButton: {
     alignItems: 'center',
-    marginRight: 19,
+    marginRight: 10,
+    minWidth: 60,
   },
   indicator: {
-    width: 48,
+    width: 50,
     height: 2,
     backgroundColor: '#394050',
     marginTop: 5,

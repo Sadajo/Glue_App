@@ -3,13 +3,21 @@ import {Text as RNText, StyleSheet} from 'react-native';
 import {useTheme} from '../../../app/providers/theme';
 import {TextProps} from './types';
 
-// 폰트 굵기 매핑 함수 (kebab-case 대신 PascalCase 사용)
-const getFontFamily = (weight: string): string => {
-  if (!weight) return 'Pretendard-Regular';
+// 폰트 굵기 매핑 함수 (CSS font-weight 값 사용)
+const getFontWeight = (weight: string): string | number => {
+  const weightMap: Record<string, string | number> = {
+    thin: '100',
+    extraLight: '200',
+    light: '300',
+    regular: '400',
+    medium: '500',
+    semiBold: '600',
+    bold: '700',
+    extraBold: '800',
+    black: '900',
+  };
 
-  // 첫 글자만 대문자로 변환 (예: 'semiBold' → 'SemiBold')
-  const capitalizedWeight = weight.charAt(0).toUpperCase() + weight.slice(1);
-  return `Pretendard-${capitalizedWeight}`;
+  return weightMap[weight] || '400';
 };
 
 export const Text = ({
@@ -29,17 +37,18 @@ export const Text = ({
   const baseStyle = typography[variant] || typography['body1'] || {};
 
   // 가중치 재정의 (제공된 경우)
-  // weight 속성이 제공되면 해당 가중치 사용, 아니면 기본 variant 스타일의 fontFamily 사용
-  const fontFamily = weight
-    ? getFontFamily(weight)
-    : baseStyle.fontFamily || 'Pretendard-Regular';
+  // weight 속성이 제공되면 해당 가중치 사용, 아니면 기본 variant 스타일의 fontWeight 사용
+  const fontWeight = weight
+    ? getFontWeight(weight)
+    : baseStyle.fontWeight || '400';
 
   const textStyle = StyleSheet.compose(
     {
       ...baseStyle,
       color: color || colors.text || '#000000',
       textAlign: align,
-      fontFamily,
+      fontFamily: 'Pretendard-Regular', // 기본 폰트 패밀리 사용
+      fontWeight,
     },
     style,
   );

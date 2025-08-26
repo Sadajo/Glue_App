@@ -7,7 +7,8 @@
     "edit": "Edit",
     "delete": "Delete",
     "loading": "Loading...",
-    "error": "An error occurred",
+    "updating": "Updating...",
+    "error": "Error",
     "retry": "Retry",
     "back": "Back",
     "next": "Next",
@@ -15,7 +16,25 @@
     "search": "Search",
     "send": "Send",
     "select": "Select",
-    "permission": "Permission Required"
+    "permission": "Permission Required",
+    "permission_required": "Permission Required",
+    "photo_permission_blocked": "Photo access permission is blocked. Please enable it in settings.",
+    "permission_check_error": "An error occurred while checking permissions",
+    "sending": "Sending...",
+    "confirm": "Confirm",
+    "success": "Success",
+    "unknownUser": "Unknown User",
+    "withdraw": "Delete"
+  },
+  "time": {
+    "am": "AM",
+    "pm": "PM",
+    "year": "",
+    "month": "",
+    "day": "",
+    "hour": "h",
+    "minute": "m",
+    "dateTimeFormat": "{{month}}/{{day}}/{{year}} {{period}} {{hours}}:{{minutes}}"
   },
   "auth": {
     "login": "Log in",
@@ -33,6 +52,14 @@
     "requiredField": "This field is required",
     "invalidEmail": "Invalid email format",
     "invalidPassword": "Password must be at least 6 characters",
+    "kakaoLoginProcessing": "Processing Kakao login...",
+    "appleLoginProcessing": "Processing Apple login...",
+    "appleNoAuthCodeError": "Failed to receive Apple authorization code",
+    "appleNoTokenError": "Failed to receive Apple authentication token",
+    "noTokenError": "Failed to receive authentication token",
+    "loginFailed": "Login failed",
+    "kakaoNoIdError": "Unable to get Kakao ID",
+    "newUserRegistration": "Please register your account information",
     "welcome": {
       "title": "GLUE",
       "subtitle": "For stronger language exchange connections",
@@ -68,19 +95,35 @@
       "title": "Please enter your university\nweb mail ID",
       "subtitle": "We will send a verification code to the ID you entered.",
       "label": "Web mail ID",
-      "placeholder": "Enter your web mail ID"
+      "placeholder": "Enter your web mail ID",
+      "invalidEmail": "Invalid email format",
+      "sendingVerification": "Sending verification code...",
+      "verificationSent": "Verification code has been sent",
+      "sendFailed": "Failed to send verification code",
+      "nextButtonNotice": "Verification code will be sent when you click Next",
+      "notice": "Only @pusan.ac.kr emails are allowed.",
+      "error": {
+        "invalidDomain": "Only @pusan.ac.kr emails are allowed."
+      }
     },
     "verification": {
       "title": "Please enter the code\nwe sent you",
       "didNotReceive": "Didn't receive the email?",
       "resend": "Resend",
-      "resendSuccess": "Verification code has been resent"
+      "resendSuccess": "Verification code has been resent",
+      "emailRequired": "Email information is required",
+      "verifying": "Verifying code...",
+      "verificationSuccess": "Verification successful",
+      "verificationFailed": "Verification failed",
+      "resendFailed": "Failed to resend verification code"
     },
     "nickname": {
       "title": "Please enter the nickname\nyou want to use on GLUE",
       "label": "Nickname",
       "placeholder": "Enter your nickname",
-      "duplicate": "This nickname is already in use."
+      "duplicate": "This nickname is already in use.",
+      "required": "Please enter a nickname.",
+      "checkFailed": "Failed to check nickname duplicate."
     },
     "profilePhoto": {
       "title": "Set your profile picture",
@@ -91,7 +134,12 @@
       "unavailable": "This feature is not available on this device.",
       "blocked": "The app cannot access the camera or gallery. Please enable permissions in settings.",
       "goToSettings": "Go to Settings",
-      "error": "An error occurred while loading the image."
+      "settingsError": "Unable to open settings.",
+      "generalError": "An error occurred while checking permissions.",
+      "error": "An error occurred while loading the image.",
+      "uploading": "Uploading...",
+      "uploadSuccess": "Image upload completed successfully.",
+      "uploadFailed": "Image upload failed."
     },
     "introduction": {
       "title": "Please introduce yourself in one line :)",
@@ -112,6 +160,26 @@
     "languageLevel": {
       "title": "Please set your proficiency level\nfor the selected language",
       "subtitle": "Language proficiency level can be changed at any time.",
+      "beginner": "Beginner",
+      "elementary": "Elementary",
+      "intermediate": "Intermediate",
+      "advanced": "Advanced",
+      "proficient": "Proficient"
+    },
+    "exchangeLanguage": {
+      "title": "Please select the language\nyou want to exchange",
+      "subtitle": "Please select the language you want to exchange.",
+      "korean": "Korean",
+      "english": "English",
+      "japanese": "Japanese",
+      "chinese": "Chinese",
+      "german": "German",
+      "french": "French",
+      "spanish": "Spanish"
+    },
+    "exchangeLanguageLevel": {
+      "title": "Please set your proficiency level\nfor the selected exchange language",
+      "subtitle": "Exchange language proficiency level can be changed at any time.",
       "beginner": "Beginner",
       "elementary": "Elementary",
       "intermediate": "Intermediate",
@@ -144,21 +212,84 @@
         "description": "you can continue to interact with the friends you want."
       },
       "startButton": "Start Now"
-    }
+    },
+    "error": "An error occurred during signup",
+    "success": "Signup completed successfully",
+    "processingSignup": "Processing signup..."
   },
   "profile": {
     "mypage": "My Page",
     "languageSettings": "Language Settings",
     "myInfo": "My Info",
     "myGroupsHistory": "My Groups History",
+    "myParticipatingGroups": "My Participating Groups",
     "myLikes": "My Likes",
     "myGuestbook": "My Guestbook",
     "privacySettings": "Privacy Settings",
+    "majorVisibility": "My Major",
+    "meetingHistoryVisibility": "My Meeting History",
+    "likeListVisibility": "My Like List",
+    "guestbookVisibility": "Guestbook",
     "edit": "Edit",
     "myLanguage": "My Language",
     "exchangeLanguage": "Exchange Language",
     "level": "Level",
-    "title": "My"
+    "title": "My",
+    "loading": "Loading information...",
+    "loadError": "Failed to load information.",
+    "defaultUser": "User",
+    "defaultBio": "No introduction available.",
+    "notSet": "Not set",
+    "language": "Language",
+    "languages": {
+      "korean": "Korean",
+      "english": "English",
+      "japanese": "Japanese",
+      "chinese": "Chinese",
+      "german": "German",
+      "french": "French",
+      "spanish": "Spanish",
+      "other": "Other"
+    },
+    "levels": {
+      "beginner": "Beginner",
+      "elementary": "Elementary",
+      "intermediate": "Intermediate",
+      "upperIntermediate": "Upper Intermediate",
+      "advanced": "Advanced",
+      "native": "Native",
+      "notSet": "Not Set"
+    },
+    "editProfile": {
+      "title": "Edit Profile",
+      "loadingProfile": "Loading profile information...",
+      "loadProfileError": "Failed to load profile information.",
+      "introduction": "Introduction",
+      "introductionPlaceholder": "Please enter your introduction",
+      "defaultIntroduction": "Hello, nice to meet you 😊 I'm currently learning English and would love to practice together!",
+      "basicInfo": "Basic Information",
+      "name": "Name",
+      "nickname": "Nickname",
+      "birthDate": "Birth Date",
+      "gender": "Gender",
+      "male": "Male",
+      "female": "Female",
+      "schoolInfo": "School Information",
+      "school": "School",
+      "department": "Department",
+      "email": "Email",
+      "selectProfileImageOption": "Please select how to choose your profile image",
+      "camera": "Camera",
+      "gallery": "Gallery",
+      "unavailable": "This feature is not available",
+      "blocked": "Permission is blocked. Please enable it in settings.",
+      "goToSettings": "Go to Settings",
+      "settingsError": "Cannot open settings",
+      "generalError": "An error occurred",
+      "imagePickerError": "Failed to select image",
+      "imageUploadSuccess": "Profile image updated successfully",
+      "imageUploadError": "Failed to upload profile image"
+    }
   },
   "board": {
     "title": "Board",
@@ -187,7 +318,7 @@
     "guest": "Guest",
     "all": "All",
     "newMessage": "New Message",
-    "empty": "No messages",
+    "empty": "No messages yet. Send your first message!",
     "chat": "Chat",
     "send": "Send",
     "typingMessage": "Type a message...",
@@ -200,6 +331,7 @@
     "groupChat": "Group Chat",
     "directMessage": "Direct Message",
     "noGroupChats": "You're not participating in any group chats.",
+    "noDirectMessages": "You don't have any direct messages.",
     "browseGroups": "Browse Groups",
     "failedToLoad": "Failed to load chat rooms",
     "chatInfo": {
@@ -220,6 +352,11 @@
     "title": "Settings",
     "theme": "Theme",
     "language": "Language",
+    "languageSettings": "Language Settings",
+    "appSettings": "App Settings",
+    "systemLanguage": "System Language",
+    "systemLanguageSelect": "Select System Language",
+    "languageSelect": "Select Language",
     "notification": "Notification",
     "account": "Account",
     "privacy": "Privacy",
@@ -227,7 +364,28 @@
     "about": "About",
     "dark": "Dark Mode",
     "light": "Light Mode",
-    "system": "System Default"
+    "system": "System Default",
+    "languageChanged": "Language has been changed",
+    "usageGuide": "Usage Guide",
+    "appVersion": "App Version",
+    "inquiry": "Contact Us",
+    "announcements": "Announcements",
+    "termsOfService": "Terms of Service",
+    "privacyPolicy": "Privacy Policy",
+    "openSourceLicense": "Open Source License",
+    "others": "Others",
+    "logout": "Log out",
+    "withdrawal": "Delete Account",
+    "logoutConfirm": "Are you sure you want to log out?",
+    "withdrawalConfirm": "Are you sure you want to delete your account? All data will be deleted.",
+    "languageChangeError": "Error changing language:",
+    "systemLanguageSelectFallback": "Please select your system language.",
+    "logoutProcessing": "Processing logout",
+    "logoutSuccess": "Successfully logged out",
+    "logoutError": "Failed to logout",
+    "withdrawalProcessing": "Processing account deletion",
+    "withdrawalSuccess": "Account has been successfully deleted",
+    "withdrawalError": "Failed to delete account"
   },
   "notification": {
     "title": "Notification Examples",
@@ -250,23 +408,86 @@
     "modal": {
       "showAlert": "Alert Modal",
       "showConfirm": "Confirm Modal",
+      "showCustom": "Custom Modal",
       "alertTitle": "Alert",
-      "alertMessage": "Please confirm this important information.",
+      "alertMessage": "There is an important alert.",
       "confirmTitle": "Confirm",
-      "confirmMessage": "Are you sure you want to perform this action?",
-      "confirmButtonPressed": "Confirm button was pressed.",
-      "cancelButtonPressed": "Cancel button was pressed."
+      "confirmMessage": "Do you want to proceed with this action?",
+      "customTitle": "Custom Modal",
+      "customMessage": "Enter your desired content."
     }
   },
   "group": {
     "title": "Groups",
-    "create": "Create Group",
+    "createButton": "Create Group",
     "all": "All",
     "write": "Write",
     "categories": {
       "study": "Study",
       "social": "Social",
       "help": "Help"
+    },
+    "create": {
+      "title": "Create Group Post",
+      "step": "{{step}} / {{total}}",
+      "selectType": "Please select the type of group\nyou want to create",
+      "social": {
+        "description": "A group for people who want to get to know each other while learning a language. Up to 10 people can join."
+      },
+      "study": {
+        "description": "A group for people who want to learn and practice a language together. Up to 10 people can join."
+      },
+      "help": {
+        "description": "A group for people who need help with language learning or want to provide assistance to others."
+      },
+      "success": {
+        "title": "Success",
+        "message": "Group post created successfully."
+      },
+      "error": {
+        "title": "Error",
+        "message": "Failed to create group post",
+        "required_fields": "Please enter both group title and location."
+      },
+      "step2": {
+        "title": "Select the languages and number\nof group members",
+        "title_help": "Please select the languages to exchange",
+        "language_exchange": "Language Exchange",
+        "my_language": "My language",
+        "and": "and",
+        "will_exchange": "will be exchanged.",
+        "member_count": "Number of Members",
+        "member_count_prefix": "Our group will have",
+        "people": "people",
+        "member_count_suffix": "in total."
+      },
+      "step3": {
+        "title": "Enter the title and content\nfor your group post",
+        "group_name_title": "Group Name Title",
+        "group_name_placeholder": "Enter group name title",
+        "detail_content": "Detailed Content",
+        "detail_content_placeholder": "Enter detailed content",
+        "image_count": "(0/1)",
+        "image_cancel": "User cancelled image selection",
+        "image_error": "Image selection error",
+        "image_selection_error": "An error occurred while selecting an image",
+        "image_added": "Image added successfully"
+      },
+      "step4": {
+        "title": "Please name your group and\nspecify meeting time and place",
+        "group_title": "Group Title",
+        "group_title_placeholder": "Please specify your group name",
+        "meeting_datetime": "Meeting Time",
+        "meeting_date": "Meeting Date",
+        "meeting_date_placeholder": "YYYY-MM-DD",
+        "meeting_time": "Meeting Time",
+        "meeting_time_placeholder": "HH:MM",
+        "meeting_location": "Meeting Place",
+        "meeting_location_placeholder": "Please specify where your group will meet",
+        "complete": "Next",
+        "select_date": "Select Date",
+        "select_time": "Select Time"
+      }
     },
     "search": {
       "placeholder": "Search title, category, or content",
@@ -279,10 +500,38 @@
       "meeting_info": "Meeting Information",
       "capacity": "8/10",
       "language": "Preferred exchange language: English",
+      "language_prefix": "Preferred exchange language:",
       "minForeigners": "Minimum English-speaking students: 2",
       "meetingDate": "April 12, 2025 at 6:00 PM",
       "likesCount": "{{count}} people like this.",
-      "joinGroup": "Send a message"
+      "joinGroup": "Send a message",
+      "language_desc": "The first language is the author's language, the second one is the exchange language.",
+      "capacity_desc": "Click to see who is participating in this group.",
+      "minForeigners_desc": "The exact meeting location address is available after joining the group.",
+      "menu": {
+        "edit": "Edit",
+        "bump": "Bump",
+        "delete": "Delete",
+        "deleteConfirm": "Are you sure you want to delete?",
+        "bumpSuccess": "Post has been bumped.",
+        "deleteSuccess": "Post has been deleted.",
+        "cancel": "Cancel",
+        "confirm": "Confirm",
+        "report": "Report",
+        "reportSubmitted": "Your report has been submitted.",
+        "reportModal": {
+          "title": "Please select a reason for reporting.",
+          "reasons": {
+            "spam": "This is spam or promotional content.",
+            "adult": "This contains adult content.",
+            "illegal": "This contains illegal information.",
+            "hate": "This contains hate speech or discriminatory language."
+          },
+          "submitButton": "Report",
+          "success": "Your report has been successfully submitted.",
+          "error": "Failed to submit the report."
+        }
+      }
     },
     "author": {
       "name": "Kim Glue",
@@ -299,10 +548,12 @@
     "popular": "Popular Groups in Real-time",
     "koreanUsers": "Groups Looking for Korean Speakers",
     "englishUsers": "Groups Looking for English Speakers",
+    "languageExchange": "Korean ↔ English Exchange Groups",
     "nearby": "Nearby Groups",
     "seeAll": "See All",
     "welcome": "Welcome",
     "emptyState": "No groups yet",
+    "loading": "Loading...",
     "createFirst": "Create your first group"
   },
   "error": {
@@ -312,5 +563,29 @@
     "forbidden": "Access denied",
     "notFound": "Not found",
     "unknown": "Unknown error occurred"
+  },
+  "invitation": {
+    "title": "Group Invitation",
+    "createSuccess": "Invitation sent to chat room successfully!",
+    "createError": "Failed to create invitation.",
+    "acceptSuccess": "Invitation accepted successfully.",
+    "acceptError": "Failed to accept invitation.",
+    "sending": "Creating invitation...",
+    "accepting": "Accepting invitation...",
+    "joiningChat": "Joining chat room...",
+    "expired": "Invitation expired",
+    "acceptInvitation": "Accept Invitation",
+    "inviteMessage": "{{senderName}} has invited you to join the group. Please press the accept button if you want to participate. The invitation will be automatically cancelled if you don't accept within 6 hours.",
+    "shortMessage": "📧 {{senderName}} invited {{inviteeName}} to the group",
+    "shortMessageDefault": "📧 Group invitation sent",
+    "status": {
+      "pending": "Pending",
+      "accepted": "Accepted",
+      "expired": "Expired",
+      "rejected": "Rejected"
+    },
+    "senderLabel": "Host",
+    "noMeetingInfo": "Meeting information or user information not found.",
+    "noInviteeFound": "Could not find user to invite."
   }
 }

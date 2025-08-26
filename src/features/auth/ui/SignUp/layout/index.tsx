@@ -30,6 +30,7 @@ type SignUpLayoutProps = {
   onBack: () => void;
   nextButtonLabel?: string;
   isNextDisabled?: boolean;
+  isLoading?: boolean;
 };
 
 const SignUpLayout = ({
@@ -40,9 +41,12 @@ const SignUpLayout = ({
   onBack,
   nextButtonLabel,
   isNextDisabled = false,
+  isLoading = false,
 }: SignUpLayoutProps) => {
   const {t} = useTranslation();
-  const buttonLabel = nextButtonLabel || t('common.next');
+  const buttonLabel = isLoading
+    ? t('common.sending')
+    : nextButtonLabel || t('common.next');
 
   // 애니메이션 값 생성
   const progressAnimation = useRef(new Animated.Value(0)).current;
@@ -114,7 +118,8 @@ const SignUpLayout = ({
             label={buttonLabel}
             onPress={onNext}
             variant={isNextDisabled ? 'disabled' : 'primary'}
-            disabled={isNextDisabled}
+            disabled={isNextDisabled || isLoading}
+            loading={isLoading}
           />
         </View>
       </KeyboardAvoidingView>

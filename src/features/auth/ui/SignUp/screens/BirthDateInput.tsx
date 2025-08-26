@@ -34,9 +34,8 @@ const BirthDateInput = ({
   // 현재 언어에 따른 locale 설정
   const currentLocale = i18n.language === 'ko' ? 'ko-KR' : 'en-US';
 
-  // 기본 날짜는 20년 전
-  const defaultDate = new Date();
-  defaultDate.setFullYear(defaultDate.getFullYear() - 20);
+  // 기본 날짜는 2002년 6월 24일
+  const defaultDate = new Date(2002, 5, 24);
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
     if (Platform.OS === 'android') {
@@ -44,8 +43,15 @@ const BirthDateInput = ({
     }
 
     if (selectedDate) {
-      setBirthDate(selectedDate);
-      onBirthDateChange(selectedDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const selectedDateOnly = new Date(selectedDate);
+      selectedDateOnly.setHours(0, 0, 0, 0);
+
+      if (selectedDateOnly < today) {
+        setBirthDate(selectedDate);
+        onBirthDateChange(selectedDate);
+      }
     }
   };
 
@@ -64,7 +70,11 @@ const BirthDateInput = ({
   return (
     <View style={styles.container}>
       <View style={styles.titleContainer}>
-        <Text variant="h2" color={colors.richBlack} style={styles.title}>
+        <Text
+          variant="h2"
+          weight="semiBold"
+          color={colors.richBlack}
+          style={styles.title}>
           {t('signup.birthdate.title')}
         </Text>
       </View>

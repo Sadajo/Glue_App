@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useCallback, useEffect, useRef} from 'react';
 import {
   SafeAreaView,
   View,
@@ -6,18 +6,71 @@ import {
   TouchableOpacity,
   Modal,
   StyleSheet,
+  ActivityIndicator,
+  RefreshControl,
+  Animated,
 } from 'react-native';
 import {useTranslation} from 'react-i18next';
-import {MOCK_GROUPS} from '../model/mockData';
 import {GroupItemCard} from './components/GroupItemCard';
 import {FloatingButton} from './components/FloatingButton';
 import {commonStyles} from './styles/groupStyles';
 import {Text} from '../../../shared/ui/typography/Text';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import GroupListHeader from './components/GroupListHeader';
+import {useInfinitePosts} from '../api/hooks';
+import {PostItem} from '../api/api';
+import {toastService} from '../../../shared/lib/notifications/toast';
 
-// 카테고리 타입
+// 카테고리 타입 및 카테고리 ID 매핑
 type CategoryType = 'all' | 'study' | 'social' | 'help';
+
+const CATEGORY_ID_MAP: Record<CategoryType, number | undefined> = {
+  all: undefined, // 전체 (필터링 없음)
+  study: 1, // 공부
+  social: 2, // 친목
+  help: 3, // 도움
+};
+
+/**
+ * 스켈레톤 아이템 컴포넌트
+ */
+const SkeletonItem: React.FC<{index: number}> = ({index}) => {
+  const opacity = useRef(new Animated.Value(0.3)).current;
+
+  useEffect(() => {
+    const animate = () => {
+      Animated.sequence([
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 800,
+          delay: index * 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          toValue: 0.3,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ]).start(() => animate());
+    };
+
+    animate();
+  }, [opacity, index]);
+
+  return (
+    <Animated.View style={[styles.skeletonItem, {opacity}]}>
+      <View style={styles.skeletonImage} />
+      <View style={styles.skeletonContent}>
+        <View style={styles.skeletonTitle} />
+        <View style={styles.skeletonDescription} />
+        <View style={styles.skeletonMeta}>
+          <View style={styles.skeletonCategory} />
+          <View style={styles.skeletonStats} />
+        </View>
+      </View>
+    </Animated.View>
+  );
+};
 
 /**
  * 모임 목록 화면 컴포넌트
@@ -27,38 +80,67 @@ const GroupList: React.FC = () => {
   const {t} = useTranslation();
   const [isDropdownVisible, setIsDropdownVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<CategoryType>('all');
-  const [filteredGroups, setFilteredGroups] = useState(MOCK_GROUPS);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  // 카테고리에 따라 모임 목록을 필터링하는 함수
+  // 선택된 카테고리 ID 가져오기
+  const selectedCategoryId = CATEGORY_ID_MAP[selectedCategory];
+
+  // 무한 스크롤 데이터 가져오기
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    isError,
+    refetch,
+  } = useInfinitePosts(selectedCategoryId);
+
+  // 모든 페이지의 게시글을 하나의 배열로 병합
+  const allPosts = data?.pages.flatMap(page => (page as any).data.posts) || [];
+
+  // 화면이 포커스될 때 자동 새로고침 (글 작성 후 돌아올 때)
+  useFocusEffect(
+    useCallback(() => {
+      // 화면이 포커스될 때마다 데이터 새로고침
+      refetch();
+    }, [refetch]),
+  );
+
+  // 데이터 로딩 완료 시 페이드인 애니메이션
   useEffect(() => {
-    if (selectedCategory === 'all') {
-      setFilteredGroups(MOCK_GROUPS);
-    } else {
-      // MOCK_GROUPS의 카테고리 값과 일치하는 한국어 카테고리 매핑
-      const categoryMapping: Record<CategoryType, string> = {
-        all: '', // all 카테고리는 사용하지 않음
-        study: '공부',
-        social: '친목',
-        help: '도움',
-      };
-
-      // 선택된 카테고리에 해당하는 모임만 필터링
-      const filtered = MOCK_GROUPS.filter(
-        group => group.category === categoryMapping[selectedCategory],
-      );
-      setFilteredGroups(filtered);
+    if (!isLoading && allPosts.length > 0) {
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    } else if (isLoading) {
+      fadeAnim.setValue(0);
     }
-  }, [selectedCategory]);
+  }, [isLoading, allPosts.length, fadeAnim]);
+
+  // 게시글 추가 로딩 핸들러 (무한 스크롤)
+  const handleLoadMore = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  // 끌어서 새로고침 핸들러
+  const handleRefresh = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
   // 모임 아이템 클릭 핸들러
-  const handleGroupPress = (groupId: string) => {
+  const handleGroupPress = (postId: number) => {
     // 그룹 상세 페이지로 이동
-    navigation.navigate('GroupDetail', {groupId});
+    navigation.navigate('GroupDetail', {postId});
   };
 
   // 글쓰기 버튼 클릭 핸들러
   const handleCreatePress = () => {
-    navigation.navigate('CreateGroup');
+    navigation.navigate('GroupCreate');
   };
 
   // 카테고리 변경 핸들러
@@ -81,6 +163,88 @@ const GroupList: React.FC = () => {
     }
   };
 
+  // 게시글 렌더링 함수
+  const renderPostItem = ({item}: {item: PostItem}) => {
+    // PostItem을 GroupItemCard에 필요한 형식으로 변환
+    const groupItem = {
+      id: item.postId.toString(),
+      title: item.title,
+      description:
+        item.content.length > 100
+          ? item.content.substring(0, 100) + '...'
+          : item.content,
+      category: getCategoryTextFromId(item.categoryId),
+      categoryColor: getCategoryColorFromId(item.categoryId),
+      categoryTextColor: getCategoryTextColorFromId(item.categoryId),
+      likes: item.likeCount,
+      viewCounts: `${item.viewCount}`,
+      participants: `${item.currentParticipants}/${item.maxParticipants}`,
+      time: formatDate(item.createdAt),
+      image: item.thumbnailUrl || undefined,
+    };
+
+    return (
+      <GroupItemCard
+        item={groupItem}
+        onPress={() => handleGroupPress(item.postId)}
+      />
+    );
+  };
+
+  // 카테고리 ID에서 텍스트로 변환
+  const getCategoryTextFromId = (categoryId: number): string => {
+    switch (categoryId) {
+      case 1:
+        return t('group.categories.study');
+      case 2:
+        return t('group.categories.social');
+      case 3:
+        return t('group.categories.help');
+      default:
+        return '';
+    }
+  };
+
+  // 카테고리 ID에서 색상으로 변환
+  const getCategoryColorFromId = (categoryId: number): string => {
+    switch (categoryId) {
+      case 1: // 공부
+        return '#DEE9FC';
+      case 2: // 친목
+        return '#E1FBE8';
+      case 3: // 도움
+        return '#FFF1BB';
+      default:
+        return '#384050';
+    }
+  };
+  const getCategoryTextColorFromId = (categoryId: number): string => {
+    switch (categoryId) {
+      case 1:
+        return '#263FA9';
+      case 2:
+        return '#306339';
+      case 3:
+        return '#A47C5E';
+      default:
+        return '#384050';
+    }
+  };
+
+  // 날짜 형식 변환 함수
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}.${month}.${day}`;
+  };
+
+  // 에러 처리
+  if (isError) {
+    toastService.error(t('common.error'), t('group.error.fetch_failed'));
+  }
+
   return (
     <SafeAreaView style={commonStyles.container}>
       {/* 헤더 컴포넌트 */}
@@ -90,14 +254,46 @@ const GroupList: React.FC = () => {
       />
 
       {/* 모임 목록 */}
-      <FlatList
-        data={filteredGroups}
-        renderItem={({item}) => (
-          <GroupItemCard item={item} onPress={handleGroupPress} />
+      <View style={{flex: 1}}>
+        {isLoading && allPosts.length === 0 ? (
+          <View style={styles.skeletonContainer}>
+            {Array.from({length: 3}).map((_, index) => (
+              <SkeletonItem key={index} index={index} />
+            ))}
+          </View>
+        ) : (
+          <Animated.View style={{flex: 1, opacity: fadeAnim}}>
+            <FlatList
+              data={allPosts}
+              renderItem={renderPostItem}
+              keyExtractor={item => item.postId.toString()}
+              showsVerticalScrollIndicator={false}
+              onEndReached={handleLoadMore}
+              onEndReachedThreshold={0.5}
+              refreshControl={
+                <RefreshControl
+                  refreshing={false}
+                  onRefresh={handleRefresh}
+                  colors={['#1CBFDC']}
+                  tintColor={'#1CBFDC'}
+                />
+              }
+              ListEmptyComponent={() => (
+                <View style={styles.emptyContainer}>
+                  <Text>{t('group.search.noResults')}</Text>
+                </View>
+              )}
+              ListFooterComponent={() =>
+                isFetchingNextPage ? (
+                  <View style={styles.loadingFooter}>
+                    <ActivityIndicator size="small" color="#1CBFDC" />
+                  </View>
+                ) : null
+              }
+            />
+          </Animated.View>
         )}
-        keyExtractor={item => item.id}
-        showsVerticalScrollIndicator={false}
-      />
+      </View>
 
       {/* 글쓰기 버튼 */}
       <FloatingButton onPress={handleCreatePress} label={t('group.write')} />
@@ -212,6 +408,83 @@ const styles = StyleSheet.create({
   },
   dropdownText: {
     fontSize: 16,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 30,
+  },
+  loadingFooter: {
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 8,
+    fontSize: 14,
+    color: '#666',
+  },
+  skeletonContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  skeletonItem: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  skeletonImage: {
+    width: 80,
+    height: 80,
+    backgroundColor: '#e9ecef',
+    borderRadius: 8,
+    marginRight: 12,
+  },
+  skeletonContent: {
+    flex: 1,
+    justifyContent: 'space-between',
+  },
+  skeletonTitle: {
+    height: 18,
+    backgroundColor: '#e9ecef',
+    borderRadius: 4,
+    marginBottom: 8,
+    width: '80%',
+  },
+  skeletonDescription: {
+    height: 14,
+    backgroundColor: '#e9ecef',
+    borderRadius: 4,
+    marginBottom: 12,
+    width: '100%',
+  },
+  skeletonMeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  skeletonCategory: {
+    height: 12,
+    backgroundColor: '#e9ecef',
+    borderRadius: 4,
+    width: 60,
+  },
+  skeletonStats: {
+    height: 12,
+    backgroundColor: '#e9ecef',
+    borderRadius: 4,
+    width: 80,
   },
 });
 

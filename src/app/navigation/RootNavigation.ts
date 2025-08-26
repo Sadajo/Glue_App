@@ -107,3 +107,163 @@ export function getCurrentRoute() {
   }
   return null;
 }
+
+/**
+ * 인증 화면(로그인)으로 이동하는 함수
+ * 로그아웃 시 사용됩니다.
+ */
+export function navigateToAuth() {
+  if (navigationRef.isReady()) {
+    navigationRef.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [
+          {
+            name: 'Auth',
+          },
+        ],
+      }),
+    );
+  } else {
+    console.error('Navigation is not ready yet!');
+  }
+}
+
+/**
+ * 알림 화면으로 이동하는 함수
+ */
+export function navigateToNotifications() {
+  navigateToTab('Notifications');
+}
+
+/**
+ * 채팅방으로 이동하는 함수
+ * @param roomId 채팅방 ID
+ * @param roomType 채팅방 타입 ('dm' | 'group')
+ */
+export function navigateToChatRoom(
+  roomId: string,
+  roomType: 'dm' | 'group' = 'dm',
+) {
+  if (navigationRef.isReady()) {
+    navigationRef.dispatch(
+      CommonActions.navigate({
+        name: 'Main',
+        params: {
+          screen: 'MainTabs',
+          params: {
+            screen: 'Chat',
+            params: {
+              screen: roomType === 'dm' ? 'DmChatRoom' : 'GroupChatRoom',
+              params: {
+                roomId,
+              },
+            },
+          },
+        },
+      }),
+    );
+  } else {
+    console.error('Navigation is not ready yet!');
+  }
+}
+
+/**
+ * 모임 상세 화면으로 이동하는 함수
+ * @param meetingId 모임 ID
+ */
+export function navigateToMeetingDetail(meetingId: string) {
+  if (navigationRef.isReady()) {
+    navigationRef.dispatch(
+      CommonActions.navigate({
+        name: 'Main',
+        params: {
+          screen: 'MainTabs',
+          params: {
+            screen: 'Meeting',
+            params: {
+              screen: 'MeetingDetail',
+              params: {
+                meetingId,
+              },
+            },
+          },
+        },
+      }),
+    );
+  } else {
+    console.error('Navigation is not ready yet!');
+  }
+}
+
+/**
+ * 프로필 화면으로 이동하는 함수
+ * @param userId 사용자 ID (선택적)
+ */
+export function navigateToProfile(userId?: string) {
+  if (navigationRef.isReady()) {
+    navigationRef.dispatch(
+      CommonActions.navigate({
+        name: 'Main',
+        params: {
+          screen: 'MainTabs',
+          params: {
+            screen: 'Profile',
+            params: userId ? {userId} : undefined,
+          },
+        },
+      }),
+    );
+  } else {
+    console.error('Navigation is not ready yet!');
+  }
+}
+
+/**
+ * FCM 알림 데이터를 기반으로 해당 화면으로 네비게이션하는 함수
+ * @param notificationData FCM 알림 데이터
+ */
+export function navigateFromNotification(notificationData: any) {
+  const {type, targetId, roomType} = notificationData;
+
+  console.log('FCM 알림으로부터 네비게이션:', {type, targetId, roomType});
+
+  switch (type) {
+    case 'chat':
+    case 'message':
+      if (targetId) {
+        navigateToChatRoom(targetId, roomType || 'dm');
+      } else {
+        navigateToTab('Chat');
+      }
+      break;
+
+    case 'meeting':
+    case 'party':
+      if (targetId) {
+        navigateToMeetingDetail(targetId);
+      } else {
+        navigateToTab('Meeting');
+      }
+      break;
+
+    case 'profile':
+    case 'follow':
+      if (targetId) {
+        navigateToProfile(targetId);
+      } else {
+        navigateToTab('Profile');
+      }
+      break;
+
+    case 'notification':
+    case 'notice':
+      navigateToNotifications();
+      break;
+
+    default:
+      // 알 수 없는 타입인 경우 알림 화면으로 이동
+      navigateToNotifications();
+      break;
+  }
+}
