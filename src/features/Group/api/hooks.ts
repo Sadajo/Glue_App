@@ -17,6 +17,7 @@ import {
   GroupChatJoinResponse,
   LikeToggleResponse,
   MeetingDetailResponse,
+  UpdateGroupPostRequest,
   createGroupPost,
   getPosts,
   getGroupDetail,
@@ -28,6 +29,7 @@ import {
   reportPost,
   joinGroupChatRoom,
   getMeetingDetail,
+  updateGroupPost,
 } from './api';
 import {useQueryClient, InvalidateQueryFilters} from '@tanstack/react-query';
 
@@ -331,6 +333,38 @@ export const useMeetingDetail = (meetingId: number, enabled = true) => {
     {
       retry: 1,
       enabled: enabled && meetingId > 0,
+    },
+  );
+};
+
+/**
+ * 게시글 수정을 위한 React Query 훅
+ * @returns useApiMutation 훅의 반환값
+ */
+export const useUpdateGroupPost = () => {
+  const queryClient = useQueryClient();
+
+  return useApiMutation<void, {postId: number; data: UpdateGroupPostRequest}>(
+    'updateGroupPost',
+    ({postId, data}: {postId: number; data: UpdateGroupPostRequest}) =>
+      updateGroupPost(postId, data),
+    {
+      onSuccess: (_, {postId}) => {
+        console.log('게시글 수정 성공:', postId);
+
+        // 모임 상세 정보 캐시 갱신
+        queryClient.invalidateQueries({
+          queryKey: ['groupDetail', String(postId)],
+        } as InvalidateQueryFilters);
+
+        // 모임 목록 캐시 갱신
+        queryClient.invalidateQueries({
+          queryKey: ['posts'],
+        } as InvalidateQueryFilters);
+      },
+      onError: (error, {postId}) => {
+        console.error(`게시글 ${postId} 수정 실패:`, error.message);
+      },
     },
   );
 };

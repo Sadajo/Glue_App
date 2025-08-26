@@ -16,6 +16,7 @@ import {
   GroupCreateStep2,
   GroupCreateStep3,
   GroupCreateStep4,
+  EditGroup,
 } from '@features/Group';
 import {GroupStackParamList} from '@features/Group/model/types';
 
@@ -185,6 +186,12 @@ const GroupNavigator = () => {
       <GroupStack.Screen
         name="GroupSearch"
         component={GroupSearch}
+        options={{headerShown: false}}
+      />
+
+      <GroupStack.Screen
+        name="EditGroup"
+        component={EditGroup}
         options={{headerShown: false}}
       />
     </GroupStack.Navigator>

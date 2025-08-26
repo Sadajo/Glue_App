@@ -51,10 +51,20 @@ interface RouteParams {
 const GroupCreateStep4 = () => {
   const navigation = useNavigation<any>();
   const route = useRoute();
-  const {t} = useTranslation();
+  const {t, i18n} = useTranslation();
   const params = route.params as RouteParams;
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+
+  // 현재 언어에 따른 locale 설정
+  const getLocale = () => {
+    const currentLanguage = i18n.language;
+    if (currentLanguage.startsWith('ko')) return 'ko';
+    if (currentLanguage.startsWith('en')) return 'en';
+    if (currentLanguage.startsWith('ja')) return 'ja';
+    if (currentLanguage.startsWith('zh')) return 'zh';
+    return 'ko'; // 기본값
+  };
 
   const [title, setTitle] = useState<string>('');
   // 현재 시간 + 3시간을 최소 시간으로 설정
@@ -557,6 +567,7 @@ const GroupCreateStep4 = () => {
                 textColor={colors.charcoal}
                 accentColor={colors.batteryChargedBlue}
                 themeVariant="light"
+                locale={getLocale()}
               />
 
               <View style={styles.modalButtonContainer}>
@@ -604,6 +615,7 @@ const GroupCreateStep4 = () => {
                 textColor={colors.charcoal}
                 accentColor={colors.batteryChargedBlue}
                 themeVariant="light"
+                locale={getLocale()}
               />
 
               <View style={styles.modalButtonContainer}>
@@ -639,6 +651,7 @@ const GroupCreateStep4 = () => {
           textColor={colors.charcoal}
           accentColor={colors.batteryChargedBlue}
           themeVariant="light"
+          locale={getLocale()}
         />
       )}
 
@@ -653,6 +666,7 @@ const GroupCreateStep4 = () => {
           textColor={colors.charcoal}
           accentColor={colors.batteryChargedBlue}
           themeVariant="light"
+          locale={getLocale()}
         />
       )}
 
